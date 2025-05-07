@@ -1,0 +1,398 @@
+@import "~dhtmlx-gantt/codebase/dhtmlxgantt.css";
+
+// Variables de couleurs
+$gradient-primary: linear-gradient(135deg, #6B73FF 0%, #000DFF 100%);
+$gradient-success: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+$gradient-warning: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+$gradient-danger: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+$gradient-header: linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%);
+
+/* Styles pour le conteneur principal */
+.timeline-container {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  min-height: 400px;
+  width: 100%;
+}
+
+/* Styles pour le conteneur Gantt */
+.gantt-chart-container {
+  height: 500px;
+  width: 100%;
+  margin-top: 1.5rem;
+  border: 1px solid #edf1f7;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.gantt-container {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+}
+
+/* Styles pour le message "pas de tâches" */
+.no-tasks {
+  text-align: center;
+  padding: 2rem;
+  background: #f5f6fa;
+  border-radius: 4px;
+  margin: 1rem 0;
+  
+  p {
+    color: #8f9bb3;
+    margin: 0;
+  }
+}
+
+/* Styles pour le loader */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  
+  p {
+    margin-top: 1rem;
+    color: #8f9bb3;
+  }
+}
+
+/* Styles Frappe Gantt */
+::ng-deep {
+  .gantt {
+    .grid-background {
+      fill: none;
+    }
+    .grid-header {
+      fill: #ffffff;
+      stroke: #e0e0e0;
+      stroke-width: 1.4;
+    }
+    .grid-row {
+      fill: #ffffff;
+    }
+    .grid-row:nth-child(even) {
+      fill: #f5f5f5;
+    }
+    .row-line {
+      stroke: #ebeff2;
+    }
+    .tick {
+      stroke: #e0e0e0;
+      stroke-width: 0.2;
+    }
+    .tick.thick {
+      stroke-width: 0.4;
+    }
+    .today-highlight {
+      fill: #fcf8e3;
+      opacity: 0.5;
+    }
+    .arrow {
+      fill: none;
+      stroke: #666;
+      stroke-width: 1.4;
+    }
+    .bar {
+      fill: #42a5f5;
+      stroke: none;
+      transition: fill 0.3s ease;
+      
+      &.progress {
+        fill: #1976d2;
+      }
+      
+      &:hover {
+        fill: #2196f3;
+      }
+    }
+    .bar-progress {
+      fill: #a3a3ff;
+    }
+    .bar-invalid {
+      fill: transparent;
+      stroke: #8d99a6;
+      stroke-width: 1;
+      stroke-dasharray: 5;
+    }
+    .bar-invalid ~ .bar-label {
+      fill: #555;
+    }
+    .bar-label {
+      fill: #fff;
+      dominant-baseline: central;
+      text-anchor: middle;
+      font-size: 12px;
+      font-weight: lighter;
+      
+      &.big {
+        fill: #555;
+        text-anchor: start;
+      }
+    }
+    .handle {
+      fill: #ddd;
+      cursor: ew-resize;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity .3s ease;
+    }
+    .bar-wrapper {
+      cursor: pointer;
+      outline: none;
+      
+      &:hover {
+        .bar {
+          fill: #a9b5c1;
+        }
+        .bar-progress {
+          fill: #8a8aff;
+        }
+        .handle {
+          visibility: visible;
+          opacity: 1;
+        }
+      }
+      
+      &.active {
+        .bar {
+          fill: #a9b5c1;
+        }
+        .bar-progress {
+          fill: #8a8aff;
+        }
+      }
+    }
+    .lower-text, .upper-text {
+      font-size: 12px;
+      text-anchor: middle;
+    }
+    .upper-text {
+      fill: #555;
+    }
+    .lower-text {
+      fill: #333;
+    }
+    .hide {
+      display: none;
+    }
+  }
+}
+
+/* Styles pour le conteneur Gantt */
+::ng-deep .gantt-container {
+  position: relative;
+  font-size: 12px;
+  
+  .popup-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 0;
+    color: #959da5;
+    border-radius: 3px;
+    
+    .title {
+      border-bottom: 3px solid #a3a3ff;
+      padding: 10px;
+    }
+    
+    .subtitle {
+      padding: 10px;
+      color: #dfe2e5;
+    }
+    
+    .pointer {
+      position: absolute;
+      height: 5px;
+      margin: 0 0 0 -5px;
+      border: 5px solid transparent;
+      border-top-color: rgba(0, 0, 0, 0.8);
+    }
+  }
+}
+
+/* Styles pour le titre */
+h2 {
+  margin-bottom: 1.5rem;
+  color: #222b45;
+  font-weight: 600;
+}
+
+/* Style pour les éléments avec ng-reflect-ng-if */
+[ng-reflect-ng-if] {
+  margin-top: 2rem;
+}
+
+/* Styles personnalisés pour le Gantt */
+::ng-deep {
+  .gantt_container {
+    border-radius: 4px;
+    border: 1px solid #e4e9f2;
+  }
+
+  .gantt_grid {
+    border-right: 1px solid #e4e9f2;
+  }
+
+  .gantt_grid_head_cell {
+    color: #222b45;
+    font-weight: 600;
+    background: #f7f9fc;
+  }
+
+  .gantt_grid_data .gantt_cell {
+    color: #222b45;
+  }
+
+  .gantt_task_line {
+    background-color: #42a5f5;
+    border-color: #1976d2;
+    
+    &.gantt_task_inline_color {
+      border-color: #1976d2;
+    }
+
+    &:hover {
+      background-color: #64b5f6;
+    }
+  }
+
+  .gantt_task_progress {
+    background-color: #1976d2;
+  }
+
+  .gantt_scale_cell {
+    color: #222b45;
+    border-right: 1px solid #e4e9f2;
+    background-color: #f7f9fc;
+  }
+
+  .gantt_scale_line {
+    border-top: 1px solid #e4e9f2;
+  }
+
+  .gantt_row, .gantt_task_row {
+    border-bottom: 1px solid #e4e9f2;
+    
+    &:hover {
+      background-color: #f7f9fc;
+    }
+  }
+
+  .gantt_task_link {
+    .gantt_line_wrapper {
+      background-color: #1976d2;
+      opacity: 0.2;
+      
+      div {
+        background-color: #1976d2;
+      }
+    }
+    
+    .gantt_link_arrow {
+      border-color: #1976d2;
+    }
+  }
+
+  .gantt_tooltip {
+    background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
+    border: none;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 0.9rem;
+    color: #2d3436;
+    
+    b {
+      color: #000DFF;
+      font-weight: 600;
+    }
+  }
+
+  .gantt_grid_head_add {
+    background: linear-gradient(to right, #f1f3f5, #ffffff);
+    border: 2px dashed #b8c2cc;
+    border-radius: 8px;
+    margin: 8px;
+    width: calc(100% - 16px);
+    transition: all 0.3s ease;
+    
+    &:hover {
+      background: linear-gradient(to right, #e3f2fd, #ffffff);
+      border-color: #6B73FF;
+      transform: translateY(-1px);
+    }
+  }
+
+  @keyframes progressPulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+  }
+
+  .gantt_task_progress {
+    animation: progressPulse 2s infinite ease-in-out;
+  }
+
+  .gantt_grid_head_cell.gantt_grid_head_add {
+    &:before {
+      content: '+';
+      font-size: 1.4rem;
+      color: #6B73FF;
+      font-weight: bold;
+    }
+  }
+
+  .weekend-scale {
+    background-color: #f8f9fa;
+    color: #dc3545;
+  }
+
+  .weekend-task {
+    background-color: #f8f9fa;
+  }
+
+  // Styles pour le titre de la tâche
+  .task-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    
+    .task-name {
+      font-weight: 500;
+    }
+    
+    .task-progress {
+      background: $gradient-primary;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+  }
+
+  // Styles pour les échelles
+  .month-scale {
+    background: $gradient-header !important;
+    color: #2d3436 !important;
+    font-weight: 700 !important;
+  }
+
+  .week-scale {
+    background: linear-gradient(to bottom, #f8f9fa, #e9ecef) !important;
+    color: #2d3436 !important;
+    font-weight: 600 !important;
+  }
+
+  .day-scale {
+    background: white !important;
+    color: #2d3436 !important;
+  }
+} 

@@ -1,0 +1,97 @@
+<nb-layout>
+  <nb-layout-column>
+    <div class="assistant-page">
+      <div class="assistant-container">
+        <div class="header">
+          <nb-icon icon="headphones-outline" class="header-icon"></nb-icon>
+          <h1>Assistant Vocal Intelligent</h1>
+        </div>
+
+        <!-- Zone principale -->
+        <nb-card>
+          <nb-card-body>
+            <div class="main-area" [class.listening]="isListening">
+              <!-- Cercles animés -->
+              <div class="voice-animation" [class.active]="isListening">
+                <div class="circle"></div>
+                <div class="circle"></div>
+                <div class="circle"></div>
+              </div>
+
+              <!-- Zone de transcription -->
+              <div class="transcription-box">
+                <div class="transcription-content">
+                  <div class="status-indicator" *ngIf="isListening">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                  </div>
+                  
+                  <!-- Champ de saisie -->
+                  <div class="input-container">
+                    <input type="text" 
+                           nbInput 
+                           fullWidth
+                           placeholder="Ex: Créer un projet nommé 'Mon Projet' qui vise à 'Développer une application' avec une échéance le 30 septembre 2025"
+                           [(ngModel)]="userInput"
+                           (input)="onUserInput($event)"
+                           (keyup)="handleEnterKey($event)"
+                           [class.listening]="isListening"
+                           [disabled]="isLoading">
+                    
+                    <!-- Indicateur de chargement -->
+                    <div class="loading-indicator" *ngIf="isLoading">
+                      <nb-spinner status="primary" size="small"></nb-spinner>
+                      <span>Traitement de la commande...</span>
+                    </div>
+                  </div>
+
+                  <p class="interim-text" *ngIf="interimTranscription">{{ interimTranscription }}</p>
+                </div>
+              </div>
+
+              <!-- Message de réponse -->
+              <div class="response-message" *ngIf="showResponse">
+                <div class="message-content">
+                  <nb-icon icon="info-outline" class="response-icon"></nb-icon>
+                  {{ responseMessage }}
+                </div>
+              </div>
+
+              <!-- Suggestions -->
+              <div class="suggestions" *ngIf="!isListening && !userInput">
+                <p class="suggestions-title">Exemples de commandes :</p>
+                <div class="suggestion-chips">
+                  <div class="suggestion-chip" (click)="userInput = 'Créer un projet nommé \'Mon Projet\' qui vise à \'Développer une application\' avec une échéance le 30 septembre 2025'">
+                    "Créer un projet nommé 'Mon Projet' qui vise à 'Développer une application' avec une échéance le 30 septembre 2025"
+                  </div>
+                  <div class="suggestion-chip" (click)="userInput = 'Ajouter un projet nommé \'Site Web\' qui vise à \'Créer un site e-commerce\' avec une échéance le 15 octobre 2025'">
+                    "Ajouter un projet nommé 'Site Web' qui vise à 'Créer un site e-commerce' avec une échéance le 15 octobre 2025"
+                  </div>
+                </div>
+              </div>
+
+              <!-- Boutons de contrôle -->
+              <div class="controls">
+                <button class="control-button microphone-button" 
+                        [class.listening]="isListening" 
+                        (click)="toggleListening()"
+                        [disabled]="isLoading">
+                  <nb-icon [icon]="isListening ? 'mic' : 'mic-outline'" class="mic-icon"></nb-icon>
+                  <span class="ripple" *ngIf="isListening"></span>
+                </button>
+                
+                <button class="control-button clear-button" 
+                        [class.disabled]="!userInput && !interimTranscription"
+                        (click)="clearTranscription()"
+                        [disabled]="isLoading">
+                  <nb-icon icon="trash-2-outline"></nb-icon>
+                </button>
+              </div>
+            </div>
+          </nb-card-body>
+        </nb-card>
+      </div>
+    </div>
+  </nb-layout-column>
+</nb-layout>

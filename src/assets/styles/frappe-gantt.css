@@ -1,0 +1,115 @@
+/* Frappe Gantt Styles */
+.gantt .grid-background {
+  fill: none;
+}
+
+.gantt .grid-header {
+  fill: #ffffff;
+  stroke: #e0e0e0;
+  stroke-width: 1.4;
+}
+
+.gantt .grid-row {
+  fill: #ffffff;
+}
+
+.gantt .grid-row:nth-child(even) {
+  fill: #f5f5f5;
+}
+
+.gantt .row-line {
+  stroke: #ebeff2;
+}
+
+.gantt .tick {
+  stroke: #e0e0e0;
+  stroke-width: 0.2;
+}
+
+.gantt .tick.thick {
+  stroke-width: 0.4;
+}
+
+.gantt .today-highlight {
+  fill: #fcf8e3;
+  opacity: 0.5;
+}
+
+.gantt .arrow {
+  fill: none;
+  stroke: #666;
+  stroke-width: 1.4;
+}
+
+.gantt .bar {
+  fill: #42a5f5;
+  stroke: none;
+  transition: fill 0.3s ease;
+}
+
+.gantt .bar-progress {
+  fill: #a3a3ff;
+}
+
+.gantt .bar-invalid {
+  fill: transparent;
+  stroke: #8d99a6;
+  stroke-width: 1;
+  stroke-dasharray: 5;
+}
+
+.gantt .bar-invalid ~ .bar-label {
+  fill: #555;
+}
+
+.gantt .bar-label {
+  fill: #fff;
+  dominant-baseline: central;
+  text-anchor: middle;
+  font-size: 12px;
+  font-weight: lighter;
+}
+
+.gantt .handle {
+  fill: #ddd;
+  cursor: ew-resize;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .3s ease;
+}
+
+.gantt .bar-wrapper {
+  cursor: pointer;
+  outline: none;
+}
+
+.gantt .bar-wrapper:hover .bar {
+  fill: #a9b5c1;
+}
+
+.gantt .bar-wrapper:hover .bar-progress {
+  fill: #8a8aff;
+}
+
+.gantt .bar-wrapper:hover .handle {
+  visibility: visible;
+  opacity: 1;
+}
+
+.gantt .lower-text, .gantt .upper-text {
+  font-size: 12px;
+  text-anchor: middle;
+}
+
+.gantt .upper-text {
+  fill: #555;
+}
+
+.gantt .lower-text {
+  fill: #333;
+}
+
+.gantt-container {
+  position: relative;
+  font-size: 12px;
+} 

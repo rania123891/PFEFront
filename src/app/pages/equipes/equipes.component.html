@@ -1,0 +1,26 @@
+<div class="row">
+  <div class="col-md-12">
+    <nb-card>
+      <nb-card-header>Sélection des Membres</nb-card-header>
+      <nb-card-body>
+        <div class="form-group">
+          <label>Sélectionnez les membres :</label>
+          <nb-select multiple fullWidth placeholder="Choisir des membres" [(selected)]="selectedUsers">
+            <nb-option *ngFor="let user of utilisateurs" [value]="user">
+              {{ user.email }}
+            </nb-option>
+          </nb-select>
+        </div>
+
+        <div *ngIf="selectedUsers.length > 0" class="mt-4">
+          <h5>Membres sélectionnés :</h5>
+          <ul>
+            <li *ngFor="let user of selectedUsers">
+              {{ user.email }}
+            </li>
+          </ul>
+        </div>
+      </nb-card-body>
+    </nb-card>
+  </div>
+</div> 

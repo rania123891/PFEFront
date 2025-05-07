@@ -1,0 +1,104 @@
+@import '../@theme/styles/themes';
+
+:host {
+  .title {
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+
+  nb-card {
+    margin: 0;
+    height: calc(100vh - 2 * 2.5rem);
+  }
+
+  .navigation .link {
+    display: inline-block;
+    text-decoration: none;
+    color: nb-theme(text-hint-color);
+    padding: 0.4rem 0.8rem;
+    font-weight: bold;
+
+    &:hover {
+      color: nb-theme(text-primary-color);
+    }
+  }
+
+  nb-card-body {
+    display: flex;
+    width: 100%;
+  }
+
+  nb-auth-block {
+    margin: auto;
+  }
+
+  .logo-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 2rem;
+
+    .logo {
+      width: 200px;
+      height: auto;
+      margin-bottom: 1rem;
+      background: url('/assets/images/poulina-logo.png') no-repeat center center;
+      background-size: contain;
+      min-height: 100px;
+    }
+  }
+
+  .another-action {
+    margin-top: 2rem;
+    text-align: center;
+  }
+
+  nb-alert {
+    margin-bottom: 2rem;
+  }
+
+  .form-control-group {
+    margin-bottom: 1rem;
+  }
+
+  .buttons-row {
+    margin: 1rem 0;
+  }
+
+  .caption {
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+  }
+
+  .title {
+    text-align: center;
+    color: nb-theme(text-primary-color);
+    font-size: 2rem;
+    font-weight: bold;
+  }
+
+  .sub-title {
+    text-align: center;
+    color: nb-theme(text-hint-color);
+    margin-bottom: 2rem;
+  }
+
+  nb-card {
+    background: nb-theme(background-basic-color-1);
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  input {
+    border-radius: 5px;
+  }
+
+  button[nbButton] {
+    margin-top: 2rem;
+    border-radius: 5px;
+    background-color: #0066b3;
+    &:hover {
+      background-color: darken(#0066b3, 10%);
+    }
+  }
+} 

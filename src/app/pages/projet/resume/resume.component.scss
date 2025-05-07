@@ -1,0 +1,191 @@
+@import '@nebular/theme/styles/theming';
+
+$navy-blue: #002366;
+$silver-gray: #C0C0C0;
+$golden: #FFD700;
+
+@include nb-install-component() {
+  nb-card {
+    margin-bottom: 1.5rem;
+    background-color: $silver-gray;
+    border: 1px solid $navy-blue;
+  }
+
+  nb-card-header {
+    background-color: $navy-blue;
+    color: #ffffff;
+    border-bottom: none;
+
+    .text-hint {
+      color: $silver-gray;
+    }
+  }
+
+  nb-card-body {
+    padding: 1.5rem;
+    height: auto;
+    min-height: auto;
+  }
+
+  .progress-bar {
+    background-color: $golden;
+  }
+
+  .progress {
+    background-color: $navy-blue;
+    border-radius: 0.25rem;
+  }
+
+  .text-hint {
+    color: $navy-blue;
+  }
+
+  .icon-container {
+    width: 3rem;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    
+    nb-icon {
+      font-size: 1.5rem;
+    }
+  }
+
+  ::ng-deep {
+    .ngx-charts {
+      fill: $navy-blue;
+    }
+
+    .bar-vertical, ngx-charts-pie-chart {
+      .tick text {
+        font-size: 12px;
+        fill: $navy-blue;
+      }
+    }
+
+    ngx-charts-bar-vertical, ngx-charts-pie-chart {
+      display: block;
+      width: 100%;
+      height: 200px;
+    }
+
+    .pie-chart {
+      .legend-items {
+        width: auto !important;
+      }
+      .legend-labels {
+        width: auto !important;
+        margin-right: 1rem;
+        color: $navy-blue;
+      }
+    }
+
+    .chart-legend {
+      .legend-labels {
+        background-color: transparent !important;
+      }
+    }
+
+    .chart-series {
+      .bar {
+        fill: $navy-blue !important;
+        &:hover {
+          fill: $golden !important;
+        }
+      }
+    }
+
+    .pie-grid {
+      .arc1 {
+        fill: $navy-blue;
+      }
+      .arc2 {
+        fill: $golden;
+      }
+    }
+  }
+
+  // Stats cards
+  .stat-card {
+    background-color: $silver-gray;
+    
+    nb-icon {
+      color: $golden;
+    }
+
+    .h4 {
+      color: $navy-blue;
+    }
+  }
+}
+
+.resume-card {
+  margin-bottom: 1.5rem;
+
+  nb-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.stats-card {
+  nb-card-body {
+    display: flex;
+    align-items: center;
+
+    nb-icon {
+      font-size: 2rem;
+      margin-right: 1rem;
+      color: $navy-blue;
+    }
+  }
+}
+
+.chart-container {
+  height: 300px;
+  width: 100%;
+}
+
+.progress-info {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+
+  .title {
+    flex: 1;
+  }
+
+  .progress-container {
+    flex: 2;
+    margin: 0 1rem;
+
+    .progress {
+      height: 0.5rem;
+      background-color: $silver-gray;
+      border-radius: 0.25rem;
+
+      .progress-bar {
+        background-color: $navy-blue;
+        border-radius: 0.25rem;
+      }
+    }
+  }
+
+  .value {
+    min-width: 3rem;
+    text-align: right;
+  }
+}
+
+::ng-deep {
+  .ngx-charts {
+    .chart-legend {
+      .legend-labels {
+        background-color: transparent !important;
+      }
+    }
+  }
+} 

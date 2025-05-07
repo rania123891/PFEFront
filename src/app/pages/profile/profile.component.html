@@ -1,0 +1,30 @@
+<div class="row">
+  <div class="col-md-12">
+    <nb-card>
+      <nb-card-header>
+        <h2>Profil Utilisateur</h2>
+      </nb-card-header>
+      <nb-card-body>
+        <div class="user-info">
+          <div class="profile-image">
+            <img src="assets/images/imageutilisateur.png" alt="Photo de profil">
+          </div>
+          <div class="user-details">
+            <div class="detail-item">
+              <label>Nom complet:</label>
+              <p>{{ userData.fullName }}</p>
+            </div>
+            <div class="detail-item">
+              <label>Email:</label>
+              <p>{{ userData.email }}</p>
+            </div>
+            <div class="detail-item">
+              <label>Rôle:</label>
+              <p>{{ userData.role }}</p>
+            </div>
+          </div>
+        </div>
+      </nb-card-body>
+    </nb-card>
+  </div>
+</div>

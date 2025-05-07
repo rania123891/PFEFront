@@ -1,0 +1,60 @@
+@import '../@theme/styles/themes';
+
+@include nb-install-component() {
+  ::ng-deep router-outlet + * {
+    display: block;
+    animation: fade 1s;
+
+    @keyframes fade {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+  }
+
+  ::ng-deep nb-menu {
+    .menu-item {
+      a {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        color: nb-theme(text-basic-color);
+        
+        .menu-icon {
+          margin-right: 0.5rem;
+          font-size: 1.25rem;
+          width: 1em;
+          text-align: center;
+        }
+
+        .menu-title {
+          flex: 1;
+        }
+      }
+
+      &.menu-group {
+        > a {
+          font-weight: bold;
+          text-transform: uppercase;
+          font-size: 0.875rem;
+        }
+      }
+
+      &.menu-children {
+        .menu-item a {
+          padding-left: 2.5rem;
+          font-size: 0.9375rem;
+        }
+
+        .menu-item .menu-children .menu-item a {
+          padding-left: 3.5rem;
+          font-size: 0.875rem;
+        }
+      }
+    }
+  }
+}

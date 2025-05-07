@@ -1,0 +1,124 @@
+@import './themes';
+
+@mixin nb-overrides() {
+  nb-select.size-medium button {
+    padding: 0.4375rem 2.2rem 0.4375rem 1.125rem !important;
+
+    nb-icon {
+      right: 0.41rem !important;
+    }
+  }
+
+  nb-sidebar {
+    width: 300px !important;
+
+    .main-container {
+      width: 300px !important;
+      background: linear-gradient(to bottom, #ffffff, #f8f9fe);
+      box-shadow: 4px 0 10px rgba(0, 0, 0, 0.05);
+
+      .scrollable {
+        padding: 1.2rem;
+
+        nb-menu {
+          margin: 0 -1.2rem;
+
+          .menu-item {
+            a {
+              padding: 0.8rem 1.2rem;
+              font-size: 1rem;
+              font-weight: 500;
+              color: #222b45;
+              transition: all 0.3s ease;
+              border-radius: 0.5rem;
+              margin: 0.2rem 0.4rem;
+
+              nb-icon {
+                font-size: 1.2rem;
+                margin-right: 0.8rem;
+                color: #8f9bb3;
+                transition: all 0.3s ease;
+              }
+
+              &:hover {
+                background: rgba(51, 102, 255, 0.1);
+                color: #3366ff;
+
+                nb-icon {
+                  color: #3366ff;
+                }
+              }
+
+              &.active {
+                background: #3366ff;
+                color: white;
+                font-weight: 600;
+                box-shadow: 0 4px 10px rgba(51, 102, 255, 0.3);
+
+                nb-icon {
+                  color: white;
+                }
+              }
+            }
+
+            &.menu-group {
+              > a {
+                font-size: 0.9rem;
+                text-transform: uppercase;
+                font-weight: 700;
+                color: #8f9bb3;
+                padding: 0.8rem 1.2rem 0.4rem;
+
+                &:hover {
+                  background: none;
+                  color: #8f9bb3;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    &.expanded {
+      width: 240px !important;
+
+      .main-container {
+        width: 240px !important;
+      }
+    }
+
+    &.collapsed {
+      width: 60px !important;
+
+      .main-container {
+        width: 60px !important;
+
+        .scrollable {
+          padding: 0.8rem;
+
+          nb-menu {
+            margin: 0 -0.8rem;
+
+            .menu-item {
+              a {
+                padding: 0.8rem;
+                margin: 0.2rem;
+                justify-content: center;
+
+                nb-icon {
+                  margin: 0;
+                  font-size: 1.4rem;
+                }
+
+                span {
+                  display: none;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
