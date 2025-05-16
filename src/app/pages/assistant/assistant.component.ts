@@ -263,4 +263,4 @@ export class AssistantComponent implements OnInit, OnDestroy {
         return 'clock-outline';
     }
   }
-}
+} 

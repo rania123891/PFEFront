@@ -1,48 +1,50 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { ReactiveFormsModule, FormsModule } from '@angular/forms';
-import { NbCardModule, NbButtonModule, NbIconModule, NbInputModule, NbSelectModule, NbSpinnerModule, NbBadgeModule, NbDialogModule, NbRadioModule } from '@nebular/theme';
-
-import { ListeEquipesComponent } from './liste-equipes.component';
-import { ModifierEquipeComponent } from './modifier-equipe.component';
-import { EquipeService } from './equipe.service';
-import { AjouterMembreDialogComponent } from './ajouter-membre-dialog.component';
 import { EquipesComponent } from './equipes.component';
-import { TeamMemberService } from '../../services/team-member.service';
-import { UserService } from '../../services/user.service';
+import { MembresEquipeSharedModule } from './membres-equipe/membres-equipe.module';
+import { MembresEquipeComponent } from './membres-equipe/membres-equipe.component';
+import {
+  NbCardModule,
+  NbIconModule,
+  NbInputModule,
+  NbButtonModule,
+  NbSelectModule,
+  NbFormFieldModule,
+  NbToastrModule,
+} from '@nebular/theme';
 
 @NgModule({
-  declarations: [
-    ListeEquipesComponent,
-    ModifierEquipeComponent,
-    AjouterMembreDialogComponent,
-    EquipesComponent
-  ],
   imports: [
     CommonModule,
-    ReactiveFormsModule,
     FormsModule,
-    RouterModule.forChild([
-      { path: '', component: ListeEquipesComponent },
-      { path: 'ajouter', component: ModifierEquipeComponent },
-      { path: 'modifier/:id', component: ModifierEquipeComponent }
-    ]),
+    ReactiveFormsModule,
     NbCardModule,
-    NbButtonModule,
     NbIconModule,
     NbInputModule,
+    NbButtonModule,
     NbSelectModule,
-    NbSpinnerModule,
-    NbBadgeModule,
-    NbRadioModule,
-    NbDialogModule.forChild()
+    NbFormFieldModule,
+    NbToastrModule,
+    MembresEquipeSharedModule,
+    RouterModule.forChild([
+      {
+        path: '',
+        component: EquipesComponent,
+      },
+      {
+        path: 'membres',
+        component: MembresEquipeComponent,
+      },
+      {
+        path: ':id/membres',
+        component: MembresEquipeComponent,
+      }
+    ]),
   ],
-  providers: [
-    EquipeService,
-    TeamMemberService,
-    UserService
+  declarations: [
+    EquipesComponent,
   ],
-  exports: [ListeEquipesComponent, EquipesComponent]
 })
 export class EquipesModule { } 

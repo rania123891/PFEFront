@@ -10,8 +10,10 @@
 
 export const environment = {
   production: false,
+  apiUrl: 'http://localhost:5093',
   apis: {
     projet: 'http://localhost:5093/projet/api',
-    user: 'http://localhost:5093/user/api'
+    user: 'http://localhost:5093/user/api',
+    assistant: 'http://localhost:5093/assistant/api'
   }
 };

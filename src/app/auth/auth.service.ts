@@ -3,6 +3,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { tap, map } from 'rxjs/operators';
 import { Router } from '@angular/router';
+import { environment } from '../../environments/environment';
 
 interface LoginResponse {
   token: string;
@@ -15,10 +16,12 @@ interface JwtPayload {
   exp: number;
 }
 
-interface RegisterDto {
+export interface RegisterDto {
   email: string;
   password: string;
   confirmPassword: string;
+  nom: string;
+  prenom: string;
   role: string;
 }
 
@@ -26,7 +29,7 @@ interface RegisterDto {
   providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = 'http://localhost:5093/user';
+  private apiUrl = environment.apis.user;
   private userRoleSubject = new BehaviorSubject<string | null>(this.getRole());
 
   constructor(
@@ -55,38 +58,36 @@ export class AuthService {
 
   login(email: string, password: string): Observable<LoginResponse> {
     const loginData = { email, password };
-
-    return this.http.post<LoginResponse>(`${this.apiUrl}/api/Utilisateur/login`, loginData)
+    return this.http.post<LoginResponse>(`${this.apiUrl}/Utilisateur/login`, loginData)
       .pipe(
         tap((response: LoginResponse) => {
           if (response && response.token) {
-            // Décoder le token pour obtenir le rôle
             const decodedToken = this.decodeToken(response.token);
             const role = decodedToken.role;
-
             this.setCookie('token', response.token, 2);
             this.setCookie('role', role, 2);
             this.userRoleSubject.next(role);
-            
-            // Redirection selon le rôle
             const returnUrl = this.getReturnUrl();
-            if (returnUrl && this.canAccessUrl(returnUrl, role)) {
+            if (returnUrl) {
               this.router.navigateByUrl(returnUrl);
             } else {
-              this.router.navigate([role === 'Admin' ? '/pages/dashboard' : '/pages/projet']);
+              this.router.navigate(['/pages/dashboard']);
             }
           }
         })
       );
   }
 
-  register(userData: RegisterDto): Observable<any> {
-    return this.http.post(`${this.apiUrl}/api/Utilisateur/register`, userData)
-      .pipe(
-        tap(() => {
-          this.router.navigate(['/auth/login']);
-        })
-      );
+  register(data: RegisterDto): Observable<any> {
+    const formData = new FormData();
+    formData.append('Email', data.email);
+    formData.append('Password', data.password);
+    formData.append('ConfirmPassword', data.confirmPassword);
+    formData.append('Nom', data.nom);
+    formData.append('Prenom', data.prenom);
+    formData.append('Role', data.role);
+
+    return this.http.post(`${this.apiUrl}/Utilisateur/register`, formData);
   }
 
   logout(): void {

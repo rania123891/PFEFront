@@ -1,25 +1,131 @@
-<div class="row">
+<!-- Vue Liste des Équipes -->
+<div class="row" *ngIf="!showAddForm && !showEditForm">
   <div class="col-md-12">
     <nb-card>
-      <nb-card-header>Sélection des Membres</nb-card-header>
+      <nb-card-header class="d-flex justify-content-between align-items-center">
+        <h5>Liste des équipes</h5>
+        <button nbButton status="primary" class="add-button" (click)="openAddForm()">
+          <nb-icon icon="plus-outline"></nb-icon>
+          NOUVELLE ÉQUIPE
+        </button>
+      </nb-card-header>
       <nb-card-body>
-        <div class="form-group">
-          <label>Sélectionnez les membres :</label>
-          <nb-select multiple fullWidth placeholder="Choisir des membres" [(selected)]="selectedUsers">
-            <nb-option *ngFor="let user of utilisateurs" [value]="user">
-              {{ user.email }}
-            </nb-option>
-          </nb-select>
+        <!-- Barre de recherche -->
+        <div class="search-container">
+          <input
+            nbInput
+            shape="round"
+            fullWidth
+            placeholder="Rechercher une équipe..."
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="onSearch()"
+          >
         </div>
 
-        <div *ngIf="selectedUsers.length > 0" class="mt-4">
-          <h5>Membres sélectionnés :</h5>
-          <ul>
-            <li *ngFor="let user of selectedUsers">
-              {{ user.email }}
-            </li>
-          </ul>
+        <!-- Tableau des équipes -->
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>NOM</th>
+                <th>STATUT</th>
+                <th>DOMAINE</th>
+                <th>PROJET</th>
+                <th>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let equipe of equipes">
+                <td>{{ equipe.nom }}</td>
+                <td class="status-cell">
+                  <span class="status-badge" [ngClass]="getStatutClass(equipe.statut)">
+                    {{ getStatutLabel(equipe.statut) }}
+                  </span>
+                </td>
+                <td>{{ getDomaineLabel(equipe.domaineActivite) }}</td>
+                <td>{{ equipe.projet?.nom || '---' }}</td>
+                <td class="actions-cell">
+                  <button nbButton ghost status="info" class="action-button" (click)="openEditForm(equipe)">
+                    <nb-icon icon="edit-2-outline"></nb-icon>
+                  </button>
+                  <button nbButton ghost status="danger" class="action-button" (click)="onDelete(equipe?.idEquipe)">
+                    <nb-icon icon="trash-2-outline"></nb-icon>
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="equipes.length === 0">
+                <td colspan="5" class="text-center">Aucune équipe trouvée</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
+      </nb-card-body>
+    </nb-card>
+  </div>
+</div>
+
+<!-- Vue Formulaire (Ajout/Modification) -->
+<div class="row" *ngIf="showAddForm || showEditForm">
+  <div class="col-md-12">
+    <nb-card>
+      <nb-card-header>
+        <h5>{{ showAddForm ? 'Ajouter une équipe' : 'Modifier l\'équipe' }}</h5>
+      </nb-card-header>
+      <nb-card-body>
+        <form [formGroup]="equipeForm" (ngSubmit)="onSubmit()">
+          <div class="row">
+            <div class="col-md-3">
+              <div class="form-group">
+                <label class="label">Nom de l'équipe</label>
+                <input nbInput fullWidth formControlName="nom" type="text" placeholder="Nom de l'équipe">
+              </div>
+            </div>
+
+            <div class="col-md-3">
+              <div class="form-group">
+                <label class="label">Statut</label>
+                <nb-select fullWidth formControlName="statut">
+                  <nb-option [value]="statutEquipe.Active">Active</nb-option>
+                  <nb-option [value]="statutEquipe.Inactive">Inactive</nb-option>
+                </nb-select>
+              </div>
+            </div>
+
+            <div class="col-md-3">
+              <div class="form-group">
+                <label class="label">Domaine d'activité</label>
+                <nb-select fullWidth formControlName="domaineActivite">
+                  <nb-option *ngFor="let domaine of domaines" [value]="domaine.value">
+                    {{ domaine.label }}
+                  </nb-option>
+                </nb-select>
+              </div>
+            </div>
+
+            <div class="col-md-3">
+              <div class="form-group">
+                <label class="label">Projet</label>
+                <nb-select fullWidth formControlName="projetId">
+                  <nb-option [value]="null">Sélectionner un projet</nb-option>
+                  <nb-option *ngFor="let projet of projets" [value]="projet.id">
+                    {{ projet.nom }}
+                  </nb-option>
+                </nb-select>
+              </div>
+            </div>
+          </div>
+
+          <div class="row mt-3">
+            <div class="col-12">
+              <button nbButton status="primary" type="submit" [disabled]="!equipeForm.valid || isSubmitting">
+                {{ isSubmitting ? 'Enregistrement...' : (showAddForm ? 'Ajouter' : 'Modifier') }}
+              </button>
+              <button nbButton status="basic" type="button" (click)="cancelForm()" class="ml-2">
+                Annuler
+              </button>
+            </div>
+          </div>
+        </form>
       </nb-card-body>
     </nb-card>
   </div>

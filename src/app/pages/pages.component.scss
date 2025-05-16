@@ -1,58 +1,70 @@
 @import '../@theme/styles/themes';
 
-@include nb-install-component() {
-  ::ng-deep router-outlet + * {
-    display: block;
-    animation: fade 1s;
+:host {
+  display: block;
+  min-height: 100vh;
+}
 
-    @keyframes fade {
-      from {
-        opacity: 0;
-      }
-
-      to {
-        opacity: 1;
-      }
-    }
+::ng-deep {
+  nb-layout-column {
+    padding: 1.25rem !important;
   }
 
-  ::ng-deep nb-menu {
-    .menu-item {
-      a {
-        display: flex;
-        align-items: center;
-        padding: 0.75rem 1rem;
-        color: nb-theme(text-basic-color);
-        
-        .menu-icon {
-          margin-right: 0.5rem;
-          font-size: 1.25rem;
-          width: 1em;
-          text-align: center;
-        }
+  nb-sidebar {
+    .main-container {
+      height: 100vh;
+      background-color: #ffffff;
 
-        .menu-title {
-          flex: 1;
-        }
-      }
+      .scrollable {
+        padding: 0;
+        margin: 0;
 
-      &.menu-group {
-        > a {
-          font-weight: bold;
-          text-transform: uppercase;
-          font-size: 0.875rem;
-        }
-      }
+        nb-menu {
+          margin: 0;
+          
+          .menu-item {
+            a {
+              display: flex;
+              align-items: center;
+              padding: 0.75rem 1rem;
+              color: #222b45;
+              font-weight: 400;
+              font-size: 0.9375rem;
+              
+              nb-icon {
+                width: 1.25rem;
+                height: 1.25rem;
+                margin-right: 0.75rem;
+                color: #8f9bb3;
+              }
 
-      &.menu-children {
-        .menu-item a {
-          padding-left: 2.5rem;
-          font-size: 0.9375rem;
-        }
+              &:hover {
+                background-color: #f5f6fa;
+                nb-icon {
+                  color: #3366ff;
+                }
+              }
 
-        .menu-item .menu-children .menu-item a {
-          padding-left: 3.5rem;
-          font-size: 0.875rem;
+              &.active {
+                background-color: #edf1f7;
+                color: #3366ff;
+                
+                nb-icon {
+                  color: #3366ff;
+                }
+              }
+            }
+          }
+
+          .menu-group {
+            border: none;
+            padding: 1rem 1rem 0.5rem;
+            color: #8f9bb3;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05rem;
+          }
         }
       }
     }

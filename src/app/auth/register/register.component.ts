@@ -1,7 +1,8 @@
-import { Component, ChangeDetectorRef } from '@angular/core';
+import { Component, ChangeDetectorRef, OnInit } from '@angular/core';
 import { NbAuthService } from '@nebular/auth';
 import { AuthService } from '../auth.service';
 import { Router } from '@angular/router';
+import { NbToastrService } from '@nebular/theme';
 
 @Component({
   selector: 'ngx-register',
@@ -18,10 +19,46 @@ import { Router } from '@angular/router';
         </div>
         
         <form (ngSubmit)="register()" #form="ngForm" aria-labelledby="title">
-          <div *ngIf="errors?.length && !submitted" class="alert alert-danger" role="alert">
+          <div *ngIf="showErrors && errors && errors.length > 0" class="alert alert-danger" role="alert">
             <ul class="error-list">
               <li *ngFor="let error of errors">{{ error }}</li>
             </ul>
+          </div>
+
+          <div *ngIf="showSuccess" class="alert alert-success" role="alert">
+            <p>{{ successMessage }}</p>
+          </div>
+
+          <div class="form-group">
+            <label for="input-nom" class="label">Nom</label>
+            <input nbInput
+                   fullWidth
+                   [(ngModel)]="user.nom"
+                   #nom="ngModel"
+                   name="nom"
+                   id="input-nom"
+                   placeholder="Votre nom"
+                   [status]="nom.dirty ? (nom.invalid ? 'danger' : 'success') : 'basic'"
+                   required>
+            <small class="form-text text-danger" *ngIf="nom.invalid && nom.touched">
+              Le nom est requis
+            </small>
+          </div>
+
+          <div class="form-group">
+            <label for="input-prenom" class="label">Prénom</label>
+            <input nbInput
+                   fullWidth
+                   [(ngModel)]="user.prenom"
+                   #prenom="ngModel"
+                   name="prenom"
+                   id="input-prenom"
+                   placeholder="Votre prénom"
+                   [status]="prenom.dirty ? (prenom.invalid ? 'danger' : 'success') : 'basic'"
+                   required>
+            <small class="form-text text-danger" *ngIf="prenom.invalid && prenom.touched">
+              Le prénom est requis
+            </small>
           </div>
 
           <div class="form-group">
@@ -102,7 +139,7 @@ import { Router } from '@angular/router';
                   size="large"
                   [disabled]="submitted || !form.valid || password.value !== confirmPassword.value || password.value.length < 6"
                   [class.btn-pulse]="submitted">
-            S'inscrire
+            {{ submitted ? 'Inscription en cours...' : 'S\'inscrire' }}
           </button>
 
           <div class="text-center mt-3">
@@ -242,86 +279,129 @@ import { Router } from '@angular/router';
         text-decoration: underline;
       }
     }
+
+    .alert-success {
+      background-color: #ecfdf5;
+      border: 1px solid #d1fae5;
+      color: #059669;
+    }
   `],
 })
-export class NgxRegisterComponent {
+export class NgxRegisterComponent implements OnInit {
   user: any = {
     email: '',
     password: '',
     confirmPassword: '',
+    nom: '',
+    prenom: '',
     role: 'User',
   };
 
   submitted = false;
+  showErrors = false;
+  showSuccess = false;
+  successMessage = '';
   errors: string[] = [];
-  messages: string[] = [];
 
   constructor(
     private authService: AuthService,
     private nbAuthService: NbAuthService,
     private cd: ChangeDetectorRef,
     private router: Router,
+    private toastrService: NbToastrService,
   ) {}
 
-  register() {
-    this.submitted = true;
+  ngOnInit() {
+    this.showErrors = false;
+    this.showSuccess = false;
     this.errors = [];
-    this.messages = [];
+    this.successMessage = '';
+  }
+
+  register() {
+    if (this.submitted) return;
+
+    this.submitted = true;
+    this.showErrors = false;
+    this.errors = [];
 
     // Validation supplémentaire
     if (this.user.password.length < 6) {
-      this.errors = ['Le mot de passe doit contenir au moins 6 caractères.'];
+      this.errors.push('Le mot de passe doit contenir au moins 6 caractères.');
       this.submitted = false;
+      this.showErrors = true;
+      this.cd.detectChanges();
       return;
     }
 
     if (this.user.password !== this.user.confirmPassword) {
-      this.errors = ['Les mots de passe ne correspondent pas.'];
+      this.errors.push('Les mots de passe ne correspondent pas.');
       this.submitted = false;
+      this.showErrors = true;
+      this.cd.detectChanges();
       return;
     }
 
     // Nettoyage des données avant envoi
     const userData = {
-      ...this.user,
       email: this.user.email.trim().toLowerCase(),
+      password: this.user.password,
+      confirmPassword: this.user.confirmPassword,
+      nom: this.user.nom.trim(),
+      prenom: this.user.prenom.trim(),
       role: this.user.role || 'User'
     };
 
     this.authService.register(userData)
       .subscribe({
-        next: (response) => {
-          this.submitted = false;
-          this.messages = ['Inscription réussie! Redirection vers la page de connexion...'];
-          setTimeout(() => {
-            this.router.navigate(['/auth/login']);
-          }, 2000);
+        next: () => {
+          this.toastrService.success('Inscription réussie!', 'Succès');
+          this.handleSuccessfulRegistration();
         },
         error: (error) => {
-          this.submitted = false;
-          console.error('Registration error:', error);
-          
-          if (error.error && typeof error.error === 'string') {
-            this.errors = [error.error];
-          } else if (error.error && error.error.errors) {
-            // Gestion des erreurs de validation du modèle
-            const validationErrors = error.error.errors;
-            const errorMessages = [];
-            
-            // Parcourir toutes les erreurs de validation
-            Object.values(validationErrors).forEach((error: any) => {
-              if (Array.isArray(error)) {
-                errorMessages.push(...error);
-              } else if (typeof error === 'string') {
-                errorMessages.push(error);
-              }
-            });
-            
-            this.errors = errorMessages;
+          if (error.status === 200) {
+            this.toastrService.success('Inscription réussie!', 'Succès');
+            this.handleSuccessfulRegistration();
           } else {
-            this.errors = ['Une erreur est survenue lors de l\'inscription.'];
+            this.submitted = false;
+            this.showErrors = true;
+            
+            if (error.error && typeof error.error === 'string') {
+              this.errors = [error.error];
+            } else if (error.error && error.error.errors) {
+              const validationErrors = error.error.errors;
+              this.errors = [];
+              Object.values(validationErrors).forEach((err: any) => {
+                if (Array.isArray(err)) {
+                  this.errors.push(...err);
+                } else if (typeof err === 'string') {
+                  this.errors.push(err);
+                }
+              });
+            } else {
+              this.errors = ['Une erreur est survenue lors de l\'inscription.'];
+            }
+            this.cd.detectChanges();
           }
         }
       });
+  }
+
+  private handleSuccessfulRegistration() {
+    // Réinitialiser le formulaire
+    this.user = {
+      email: '',
+      password: '',
+      confirmPassword: '',
+      nom: '',
+      prenom: '',
+      role: 'User'
+    };
+    
+    // Redirection immédiate
+    this.router.navigate(['/auth/login']).then(() => {
+      // Forcer le rechargement de la page après la navigation
+      window.location.reload();
+    });
   }
 } 

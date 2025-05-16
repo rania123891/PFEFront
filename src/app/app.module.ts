@@ -13,6 +13,7 @@ import { AppComponent } from './app.component';
 import { AppRoutingModule } from './app-routing.module';
 import { NgxAuthModule } from './auth/auth.module';
 import { ToastrModule } from 'ngx-toastr';
+import { ErrorInterceptor } from './services/error.interceptor';
 import {
   NbChatModule,
   NbDatepickerModule,
@@ -61,6 +62,11 @@ import { AuthInterceptor } from './auth/auth.interceptor';
     {
       provide: HTTP_INTERCEPTORS,
       useClass: AuthInterceptor,
+      multi: true,
+    },
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: ErrorInterceptor,
       multi: true,
     }
   ],

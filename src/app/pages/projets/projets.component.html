@@ -1,0 +1,333 @@
+<!-- Vue Liste des Projets -->
+<div class="row" *ngIf="!showAddForm && !showEditForm">
+  <div class="col-md-12">
+    <nb-card>
+      <nb-card-header class="d-flex justify-content-between align-items-center">
+        <h5>Liste des projets</h5>
+        <button nbButton status="primary" class="add-button" (click)="openAddForm()">
+          <nb-icon icon="plus-outline"></nb-icon>
+          NOUVEAU PROJET
+        </button>
+      </nb-card-header>
+      <nb-card-body>
+        <!-- Barre de recherche -->
+        <div class="search-container">
+          <input
+            nbInput
+            shape="round"
+            fullWidth
+            placeholder="Rechercher un projet..."
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="onSearch()"
+          >
+        </div>
+
+        <!-- Tableau des projets -->
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>NOM</th>
+                <th>DESCRIPTION</th>
+                <th>STATUT</th>
+                <th>DATE DE DÉBUT</th>
+                <th>DATE D'ÉCHÉANCE</th>
+                <th>DURÉE (JOURS)</th>
+                <th>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let projet of projets">
+                <td>{{ projet.nom }}</td>
+                <td>{{ projet.description }}</td>
+                <td class="status-cell">
+                  <span class="status-badge" [ngClass]="getStatutClass(projet.statut)">
+                    {{ getStatutLabel(projet.statut) }}
+                  </span>
+                </td>
+                <td>{{ projet.dateDebut | date:'dd/MM/yyyy' }}</td>
+                <td>{{ projet.dateEcheance | date:'dd/MM/yyyy' }}</td>
+                <td>{{ projet.duree }}</td>
+                <td class="actions-cell">
+                  <button nbButton ghost status="info" class="action-button" (click)="openEditForm(projet)">
+                    <nb-icon icon="edit-2-outline"></nb-icon>
+                  </button>
+                  <button nbButton ghost status="danger" class="action-button" (click)="onDelete(projet.id)">
+                    <nb-icon icon="trash-2-outline"></nb-icon>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </nb-card-body>
+    </nb-card>
+  </div>
+</div>
+
+<!-- Vue Ajouter Projet -->
+<div class="row" *ngIf="showAddForm">
+  <div class="col-md-12">
+    <nb-card>
+      <nb-card-header class="d-flex justify-content-between align-items-center">
+        <h5>Nouveau projet</h5>
+        <button nbButton ghost status="basic" (click)="cancelForm()">
+          <nb-icon icon="close-outline"></nb-icon>
+        </button>
+      </nb-card-header>
+      <nb-card-body>
+        <form [formGroup]="projetForm" (ngSubmit)="onSubmit()">
+          <div class="form-group">
+            <label for="nom" class="label">Nom du projet *</label>
+            <input
+              nbInput
+              fullWidth
+              id="nom"
+              formControlName="nom"
+              placeholder="Entrez le nom du projet"
+              [status]="projetForm.get('nom').touched && projetForm.get('nom').invalid ? 'danger' : 'basic'"
+            >
+            <span class="error" *ngIf="projetForm.get('nom').touched && projetForm.get('nom').invalid">
+              Le nom du projet est requis (minimum 3 caractères)
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label for="description" class="label">Description *</label>
+            <textarea
+              nbInput
+              fullWidth
+              id="description"
+              formControlName="description"
+              placeholder="Décrivez votre projet"
+              rows="3"
+              [status]="projetForm.get('description').touched && projetForm.get('description').invalid ? 'danger' : 'basic'"
+            ></textarea>
+            <span class="error" *ngIf="projetForm.get('description').touched && projetForm.get('description').invalid">
+              La description est requise
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label for="statut" class="label">Statut *</label>
+            <nb-select fullWidth formControlName="statut" id="statut">
+              <nb-option [value]="statutProjet.EnCours">En cours</nb-option>
+              <nb-option [value]="statutProjet.Termine">Terminé</nb-option>
+              <nb-option [value]="statutProjet.Annule">Annulé</nb-option>
+            </nb-select>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="dateDebut" class="label">Date de début *</label>
+                <input
+                  nbInput
+                  fullWidth
+                  formControlName="dateDebut"
+                  [nbDatepicker]="dateDebutPicker"
+                  id="dateDebut"
+                >
+                <nb-datepicker #dateDebutPicker></nb-datepicker>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="dateEcheance" class="label">Date d'échéance *</label>
+                <input
+                  nbInput
+                  fullWidth
+                  formControlName="dateEcheance"
+                  [nbDatepicker]="dateEcheancePicker"
+                  id="dateEcheance"
+                >
+                <nb-datepicker #dateEcheancePicker></nb-datepicker>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="duree" class="label">Durée (jours)</label>
+            <input
+              nbInput
+              fullWidth
+              formControlName="duree"
+              type="number"
+              id="duree"
+              disabled
+            >
+          </div>
+
+          <div class="form-actions">
+            <button nbButton status="basic" type="button" (click)="cancelForm()">Annuler</button>
+            <button nbButton status="primary" type="submit" [disabled]="projetForm.invalid || isSubmitting">
+              {{ isSubmitting ? 'Enregistrement...' : 'Enregistrer' }}
+            </button>
+          </div>
+        </form>
+      </nb-card-body>
+    </nb-card>
+  </div>
+</div>
+
+<!-- Vue Modifier Projet -->
+<div class="row" *ngIf="showEditForm">
+  <div class="col-md-12">
+    <nb-card>
+      <nb-card-header class="d-flex justify-content-between align-items-center">
+        <h5>Modifier le projet</h5>
+        <button nbButton ghost status="basic" (click)="cancelForm()">
+          <nb-icon icon="close-outline"></nb-icon>
+        </button>
+      </nb-card-header>
+      <nb-card-body>
+        <form [formGroup]="projetForm" (ngSubmit)="onSubmit()">
+          <div class="form-group">
+            <label for="nom" class="label">Nom du projet *</label>
+            <input
+              nbInput
+              fullWidth
+              id="nom"
+              formControlName="nom"
+              placeholder="Entrez le nom du projet"
+              [status]="projetForm.get('nom').touched && projetForm.get('nom').invalid ? 'danger' : 'basic'"
+            >
+            <span class="error" *ngIf="projetForm.get('nom').touched && projetForm.get('nom').invalid">
+              Le nom du projet est requis (minimum 3 caractères)
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label for="description" class="label">Description *</label>
+            <textarea
+              nbInput
+              fullWidth
+              id="description"
+              formControlName="description"
+              placeholder="Décrivez votre projet"
+              rows="3"
+              [status]="projetForm.get('description').touched && projetForm.get('description').invalid ? 'danger' : 'basic'"
+            ></textarea>
+            <span class="error" *ngIf="projetForm.get('description').touched && projetForm.get('description').invalid">
+              La description est requise
+            </span>
+          </div>
+
+          <div class="form-group">
+            <label for="statut" class="label">Statut *</label>
+            <nb-select fullWidth formControlName="statut" id="statut">
+              <nb-option [value]="statutProjet.EnCours">En cours</nb-option>
+              <nb-option [value]="statutProjet.Termine">Terminé</nb-option>
+              <nb-option [value]="statutProjet.Annule">Annulé</nb-option>
+            </nb-select>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="dateDebut" class="label">Date de début *</label>
+                <input
+                  nbInput
+                  fullWidth
+                  formControlName="dateDebut"
+                  [nbDatepicker]="dateDebutPicker"
+                  id="dateDebut"
+                >
+                <nb-datepicker #dateDebutPicker></nb-datepicker>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="dateEcheance" class="label">Date d'échéance *</label>
+                <input
+                  nbInput
+                  fullWidth
+                  formControlName="dateEcheance"
+                  [nbDatepicker]="dateEcheancePicker"
+                  id="dateEcheance"
+                >
+                <nb-datepicker #dateEcheancePicker></nb-datepicker>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="duree" class="label">Durée (jours)</label>
+            <input
+              nbInput
+              fullWidth
+              formControlName="duree"
+              type="number"
+              id="duree"
+              disabled
+            >
+          </div>
+
+          <div class="form-actions">
+            <button nbButton status="basic" type="button" (click)="cancelForm()">Annuler</button>
+            <button nbButton status="primary" type="submit" [disabled]="projetForm.invalid || isSubmitting">
+              {{ isSubmitting ? 'Enregistrement...' : 'Enregistrer' }}
+            </button>
+          </div>
+        </form>
+      </nb-card-body>
+    </nb-card>
+  </div>
+</div>
+
+<style>
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+
+  .form-control-group {
+    margin-bottom: 1.5rem;
+  }
+
+  .label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+  }
+
+  .error {
+    display: block;
+    color: #ff3d71;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+  }
+
+  .form-buttons-group {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .actions-container {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .text-hint {
+    color: #8f9bb3;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    display: block;
+  }
+
+  table th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.875rem;
+  }
+
+  nb-card-header h5 {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  nb-badge {
+    text-transform: capitalize;
+  }
+</style> 

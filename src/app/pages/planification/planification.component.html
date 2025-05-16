@@ -1,0 +1,180 @@
+<div class="container">
+  <!-- Date Picker Section -->
+  <div class="date-picker-section">
+    <div class="select-date">
+      <label>Select date</label>
+      <input nbInput placeholder="mm/dd/yyyy" [nbDatepicker]="datepicker" [(ngModel)]="selectedDate">
+      <nb-datepicker #datepicker></nb-datepicker>
+    </div>
+  </div>
+
+  <!-- Task Planning Form -->
+  <div class="task-planning-form">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Heure début</label>
+        <input nbInput type="time" [(ngModel)]="heureDebut">
+      </div>
+      <div class="form-group">
+        <label>Heure fin</label>
+        <input nbInput type="time" [(ngModel)]="heureFin">
+      </div>
+      <div class="form-group project-select">
+        <label>Projet</label>
+        <nb-select placeholder="Sélectionner le projet" [(ngModel)]="selectedProjet" (selectedChange)="onProjetChange($event)">
+          <nb-option *ngFor="let projet of projets" [value]="projet.id">
+            {{ projet.nom }}
+          </nb-option>
+        </nb-select>
+      </div>
+      <div class="form-group task-select">
+        <label>Tâche</label>
+        <nb-select placeholder="Sélectionner la tâche">
+          <nb-option *ngFor="let tache of taches" [value]="tache.id">
+            {{ tache.titre }}
+          </nb-option>
+        </nb-select>
+      </div>
+      <div class="form-group description-input">
+        <label>Description</label>
+        <input nbInput placeholder="écrire ici">
+      </div>
+    </div>
+  </div>
+
+  <!-- Kanban Board -->
+  <div class="kanban-board">
+    <!-- To Do Column -->
+    <div class="kanban-column todo-column">
+      <div class="column-header">
+        <h6>To Do</h6>
+        <div class="header-line"></div>
+      </div>
+      <div class="tasks-container">
+        <div class="task-card" *ngFor="let task of getTachesByStatut(StatutTache.EnCours)">
+          <div class="task-header">
+            <h6>{{ task.titre }}</h6>
+            <span class="task-menu">...</span>
+          </div>
+          <p class="task-description">{{ task.description }}</p>
+          <div class="task-footer">
+            <div class="task-members">
+              <nb-user size="small" [name]="''" [picture]="'assets/images/avatar.png'"></nb-user>
+            </div>
+            <div class="task-meta">
+              <span class="comments">
+                <nb-icon icon="message-circle-outline"></nb-icon>
+                {{ task.commentaires?.length || 0 }}
+              </span>
+              <span class="files">
+                <nb-icon icon="file-text-outline"></nb-icon>
+                0
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- On Progress Column -->
+    <div class="kanban-column progress-column">
+      <div class="column-header">
+        <h6>On Progress</h6>
+        <div class="header-line"></div>
+      </div>
+      <div class="tasks-container">
+        <div class="task-card" *ngFor="let task of getTachesByStatut(StatutTache.EnCours)">
+          <div class="task-header">
+            <h6>{{ task.titre }}</h6>
+            <span class="task-menu">...</span>
+          </div>
+          <p class="task-description">{{ task.description }}</p>
+          <div class="task-footer">
+            <div class="task-members">
+              <nb-user size="small" [name]="''" [picture]="'assets/images/avatar.png'"></nb-user>
+            </div>
+            <div class="task-meta">
+              <span class="comments">
+                <nb-icon icon="message-circle-outline"></nb-icon>
+                {{ task.commentaires?.length || 0 }}
+              </span>
+              <span class="files">
+                <nb-icon icon="file-text-outline"></nb-icon>
+                0
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test Column -->
+    <div class="kanban-column test-column">
+      <div class="column-header">
+        <h6>Test</h6>
+        <div class="header-line"></div>
+      </div>
+      <div class="tasks-container">
+        <div class="task-card" *ngFor="let task of getTachesByStatut(StatutTache.Terminee)">
+          <div class="task-header">
+            <h6>{{ task.titre }}</h6>
+            <span class="task-menu">...</span>
+          </div>
+          <p class="task-description">{{ task.description }}</p>
+          <div class="task-footer">
+            <div class="task-members">
+              <nb-user size="small" [name]="''" [picture]="'assets/images/avatar.png'"></nb-user>
+            </div>
+            <div class="task-meta">
+              <span class="comments">
+                <nb-icon icon="message-circle-outline"></nb-icon>
+                {{ task.commentaires?.length || 0 }}
+              </span>
+              <span class="files">
+                <nb-icon icon="file-text-outline"></nb-icon>
+                0
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Done Column -->
+    <div class="kanban-column done-column">
+      <div class="column-header">
+        <h6>Done</h6>
+        <div class="header-line"></div>
+      </div>
+      <div class="tasks-container">
+        <div class="task-card" *ngFor="let task of getTachesByStatut(StatutTache.Terminee)">
+          <div class="task-header">
+            <h6>{{ task.titre }}</h6>
+            <span class="task-menu">...</span>
+          </div>
+          <p class="task-description">{{ task.description }}</p>
+          <div class="task-footer">
+            <div class="task-members">
+              <nb-user size="small" [name]="''" [picture]="'assets/images/avatar.png'"></nb-user>
+            </div>
+            <div class="task-meta">
+              <span class="comments">
+                <nb-icon icon="message-circle-outline"></nb-icon>
+                {{ task.commentaires?.length || 0 }}
+              </span>
+              <span class="files">
+                <nb-icon icon="file-text-outline"></nb-icon>
+                0
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Indicator -->
+  <div class="loading-overlay" *ngIf="loading">
+    <nb-spinner></nb-spinner>
+  </div>
+</div> 

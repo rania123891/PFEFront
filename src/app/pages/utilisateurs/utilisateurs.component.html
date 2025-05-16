@@ -1,0 +1,176 @@
+<!-- Vue Liste des Utilisateurs -->
+<div class="row" *ngIf="!showAddForm && !showEditForm">
+  <div class="col-md-12">
+    <nb-card>
+      <nb-card-header class="d-flex justify-content-between align-items-center">
+        <h5>Liste des utilisateurs</h5>
+        <button nbButton status="primary" class="add-button" (click)="openAddForm()">
+          <nb-icon icon="plus-outline"></nb-icon>
+          NOUVEL UTILISATEUR
+        </button>
+      </nb-card-header>
+      <nb-card-body>
+        <!-- Barre de recherche -->
+        <div class="search-container">
+          <input
+            nbInput
+            shape="round"
+            fullWidth
+            placeholder="Rechercher un utilisateur..."
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="onSearch()"
+          >
+        </div>
+
+        <!-- Tableau des utilisateurs -->
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>NOM</th>
+                <th>PRÉNOM</th>
+                <th>EMAIL</th>
+                <th>RÔLE</th>
+                <th>DATE DE CRÉATION</th>
+                <th>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let utilisateur of utilisateurs">
+                <td>{{ utilisateur.nom || '---' }}</td>
+                <td>{{ utilisateur.prenom || '---' }}</td>
+                <td>{{ utilisateur.email }}</td>
+                <td class="status-cell">
+                  <span class="status-badge" [ngClass]="getRoleClass(utilisateur.role)">
+                    {{ utilisateur.role || '---' }}
+                  </span>
+                </td>
+                <td>{{ utilisateur.dateCreation ? (utilisateur.dateCreation | date:'dd/MM/yyyy') : '---' }}</td>
+                <td class="actions-cell">
+                  <button nbButton ghost status="info" class="action-button" (click)="openEditForm(utilisateur)">
+                    <nb-icon icon="edit-2-outline"></nb-icon>
+                  </button>
+                  <button nbButton ghost status="danger" class="action-button" (click)="onDelete(utilisateur.id)">
+                    <nb-icon icon="trash-2-outline"></nb-icon>
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="utilisateurs.length === 0">
+                <td colspan="6" class="text-center">Aucun utilisateur trouvé</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </nb-card-body>
+    </nb-card>
+  </div>
+</div>
+
+<!-- Vue Formulaire (Ajout/Modification) -->
+<div class="row" *ngIf="showAddForm || showEditForm">
+  <div class="col-md-12">
+    <nb-card>
+      <nb-card-header>
+        <h5>{{ showAddForm ? 'Ajouter un utilisateur' : 'Modifier l\'utilisateur' }}</h5>
+      </nb-card-header>
+      <nb-card-body>
+        <form [formGroup]="utilisateurForm" (ngSubmit)="onSubmit()">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="email" class="label">Email *</label>
+                <input
+                  nbInput
+                  fullWidth
+                  id="email"
+                  formControlName="email"
+                  placeholder="Entrez l'email"
+                  [status]="utilisateurForm.get('email').touched && utilisateurForm.get('email').invalid ? 'danger' : 'basic'"
+                >
+                <span class="error" *ngIf="utilisateurForm.get('email').touched && utilisateurForm.get('email').invalid">
+                  <span *ngIf="utilisateurForm.get('email').errors?.required">L'email est requis</span>
+                  <span *ngIf="utilisateurForm.get('email').errors?.email">Format d'email invalide</span>
+                </span>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="role" class="label">Rôle *</label>
+                <nb-select fullWidth formControlName="role" id="role">
+                  <nb-option value="ADMINISTRATEUR">Administrateur</nb-option>
+                  <nb-option value="UTILISATEUR">Utilisateur</nb-option>
+                </nb-select>
+                <span class="error" *ngIf="utilisateurForm.get('role').touched && utilisateurForm.get('role').invalid">
+                  Le rôle est requis
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="nom" class="label">Nom *</label>
+                <input
+                  nbInput
+                  fullWidth
+                  id="nom"
+                  formControlName="nom"
+                  placeholder="Entrez le nom"
+                  [status]="utilisateurForm.get('nom').touched && utilisateurForm.get('nom').invalid ? 'danger' : 'basic'"
+                >
+                <span class="error" *ngIf="utilisateurForm.get('nom').touched && utilisateurForm.get('nom').invalid">
+                  Le nom est requis
+                </span>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label for="prenom" class="label">Prénom *</label>
+                <input
+                  nbInput
+                  fullWidth
+                  id="prenom"
+                  formControlName="prenom"
+                  placeholder="Entrez le prénom"
+                  [status]="utilisateurForm.get('prenom').touched && utilisateurForm.get('prenom').invalid ? 'danger' : 'basic'"
+                >
+                <span class="error" *ngIf="utilisateurForm.get('prenom').touched && utilisateurForm.get('prenom').invalid">
+                  Le prénom est requis
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="row" *ngIf="showAddForm">
+            <div class="col-md-12">
+              <div class="form-group">
+                <label for="password" class="label">Mot de passe *</label>
+                <input
+                  nbInput
+                  fullWidth
+                  type="password"
+                  id="password"
+                  formControlName="password"
+                  placeholder="Entrez le mot de passe"
+                  [status]="utilisateurForm.get('password').touched && utilisateurForm.get('password').invalid ? 'danger' : 'basic'"
+                >
+                <span class="error" *ngIf="utilisateurForm.get('password').touched && utilisateurForm.get('password').invalid">
+                  <span *ngIf="utilisateurForm.get('password').errors?.required">Le mot de passe est requis</span>
+                  <span *ngIf="utilisateurForm.get('password').errors?.minlength">Le mot de passe doit contenir au moins 6 caractères</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button nbButton status="basic" type="button" (click)="cancelForm()">Annuler</button>
+            <button nbButton status="primary" type="submit" [disabled]="utilisateurForm.invalid || isSubmitting">
+              {{ isSubmitting ? 'Enregistrement...' : 'Enregistrer' }}
+            </button>
+          </div>
+        </form>
+      </nb-card-body>
+    </nb-card>
+  </div>
+</div> 
