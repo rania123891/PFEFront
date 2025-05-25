@@ -13,4 +13,170 @@
       display: none;
     }
   }
+
+  // Styles pour le nouveau dashboard
+  .stats-overview {
+    margin-bottom: 2rem;
+    
+    .col-lg-3, .col-md-6 {
+      margin-bottom: 1rem;
+    }
+  }
+
+  .charts-section {
+    margin-bottom: 2rem;
+    
+    .col-lg-6, .col-md-12 {
+      margin-bottom: 1rem;
+    }
+  }
+
+  .planning-section {
+    margin-bottom: 2rem;
+    
+    .col-lg-8, .col-lg-4, .col-md-12 {
+      margin-bottom: 1rem;
+    }
+  }
+
+  .teams-section {
+    margin-bottom: 2rem;
+    
+    .col-12 {
+      margin-bottom: 1rem;
+    }
+  }
+
+  .projects-progress {
+    margin-bottom: 2rem;
+    
+    .col-12 {
+      margin-bottom: 1rem;
+    }
+  }
+
+  .quick-actions {
+    margin-bottom: 0;
+  }
+
+  // Animation d'apparition pour les cartes
+  .stats-overview {
+    animation: fadeInUp 0.6s ease-out;
+  }
+
+  .charts-section {
+    animation: fadeInUp 0.8s ease-out;
+  }
+
+  .planning-section {
+    animation: fadeInUp 1s ease-out;
+  }
+
+  .teams-section {
+    animation: fadeInUp 1.2s ease-out;
+  }
+
+  .projects-progress {
+    animation: fadeInUp 1.4s ease-out;
+  }
+
+  .quick-actions {
+    animation: fadeInUp 1.6s ease-out;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  // Responsive design
+  @include media-breakpoint-down(md) {
+    .stats-overview {
+      .col-lg-3 {
+        margin-bottom: 1.5rem;
+      }
+    }
+
+    .charts-section {
+      .col-lg-6 {
+        margin-bottom: 1.5rem;
+      }
+    }
+
+    .planning-section {
+      .col-lg-8, .col-lg-4 {
+        margin-bottom: 1.5rem;
+      }
+    }
+
+    .teams-section {
+      .col-12 {
+        margin-bottom: 1.5rem;
+      }
+    }
+  }
+
+  @include media-breakpoint-down(sm) {
+    .stats-overview,
+    .charts-section,
+    .planning-section,
+    .teams-section,
+    .projects-progress,
+    .quick-actions {
+      margin-bottom: 1.5rem;
+    }
+  }
+
+  // Style global pour les cartes
+  nb-card {
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+
+    &:hover {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      transform: translateY(-1px);
+    }
+
+    nb-card-header {
+      background: transparent;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      padding: 1.5rem 1.5rem 1rem;
+
+      h6 {
+        font-weight: 600;
+        color: #2c2c54;
+        margin: 0;
+        font-size: 1.1rem;
+      }
+    }
+
+    nb-card-body {
+      padding: 1.5rem;
+    }
+  }
+
+  // Amélioration des couleurs et contrastes
+  .text-primary { color: #667eea !important; }
+  .text-success { color: #4facfe !important; }
+  .text-info { color: #43e97b !important; }
+  .text-warning { color: #fa709a !important; }
+  .text-danger { color: #ff9a9e !important; }
+
+  // Spinners de chargement personnalisés
+  nb-spinner {
+    ::ng-deep .spinner-container {
+      .spinner {
+        border-color: rgba(102, 126, 234, 0.2);
+        border-top-color: #667eea;
+      }
+    }
+  }
 }

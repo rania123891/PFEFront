@@ -1,42 +1,39 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Routes } from '@angular/router';
-import { HttpClientModule } from '@angular/common/http';
-import { ReactiveFormsModule } from '@angular/forms';
-import { 
-  NbCardModule, 
-  NbIconModule, 
-  NbButtonModule, 
-  NbBadgeModule, 
-  NbDialogModule,
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
+import { UtilisateursComponent } from './utilisateurs.component';
+import {
+  NbCardModule,
+  NbIconModule,
   NbInputModule,
+  NbButtonModule,
   NbSelectModule,
+  NbFormFieldModule,
+  NbToastrModule,
 } from '@nebular/theme';
-import { ListeUtilisateursComponent } from './liste-utilisateurs/liste-utilisateurs.component';
-
-const routes: Routes = [
-  {
-    path: 'liste',
-    component: ListeUtilisateursComponent,
-  },
-];
 
 @NgModule({
-  declarations: [
-    ListeUtilisateursComponent
-  ],
   imports: [
     CommonModule,
-    HttpClientModule,
+    FormsModule,
     ReactiveFormsModule,
-    RouterModule.forChild(routes),
     NbCardModule,
     NbIconModule,
-    NbButtonModule,
-    NbBadgeModule,
-    NbDialogModule.forChild(),
     NbInputModule,
+    NbButtonModule,
     NbSelectModule,
+    NbFormFieldModule,
+    NbToastrModule,
+    RouterModule.forChild([
+      {
+        path: '',
+        component: UtilisateursComponent,
+      },
+    ]),
+  ],
+  declarations: [
+    UtilisateursComponent,
   ],
 })
 export class UtilisateursModule { } 

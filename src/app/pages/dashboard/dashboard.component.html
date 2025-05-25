@@ -1,56 +1,101 @@
-<!-- Vue d'ensemble des projets -->
-<div class="row">
-  <div class="col-xxxl-12 col-xxl-12 col-lg-12 col-md-12">
-    <ngx-project-stats></ngx-project-stats>
+<!-- Statistiques principales -->
+<div class="row stats-overview">
+  <div class="col-lg-3 col-md-6">
+    <ngx-overview-card 
+      title="Total Projets" 
+      [value]="statistiques?.totalProjets || 0"
+      icon="folder-outline"
+      color="primary"
+      [isLoading]="loading">
+    </ngx-overview-card>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <ngx-overview-card 
+      title="Total Tâches" 
+      [value]="statistiques?.totalTaches || 0"
+      icon="checkmark-square-outline"
+      color="success"
+      [isLoading]="loading">
+    </ngx-overview-card>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <ngx-overview-card 
+      title="Total Utilisateurs" 
+      [value]="statistiques?.totalUtilisateurs || 0"
+      icon="people-outline"
+      color="info"
+      [isLoading]="loading">
+    </ngx-overview-card>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <ngx-overview-card 
+      title="Total Équipes" 
+      [value]="statistiques?.totalEquipes || 0"
+      icon="person-outline"
+      color="warning"
+      [isLoading]="loading">
+    </ngx-overview-card>
   </div>
 </div>
 
-<!-- Timeline des projets -->
-<div class="row">
-  <div class="col-xxxl-12 col-xxl-12 col-lg-12 col-md-12">
-    <ngx-project-timeline></ngx-project-timeline>
+<!-- Graphiques et analyses -->
+<div class="row charts-section">
+  <!-- Répartition des tâches par statut -->
+  <div class="col-lg-6 col-md-12">
+    <ngx-task-status-chart 
+      [data]="statistiques?.tachesParStatut"
+      [isLoading]="loading">
+    </ngx-task-status-chart>
+  </div>
+  
+  <!-- Projets créés par mois -->
+  <div class="col-lg-6 col-md-12">
+    <ngx-projects-trend-chart 
+      [data]="statistiques?.projetsParMois"
+      [isLoading]="loading">
+    </ngx-projects-trend-chart>
   </div>
 </div>
 
-<!-- Autres composants existants -->
-<div class="row">
-  <div class="col-xxxl-3 col-md-6" *ngFor="let statusCard of statusCards">
-    <ngx-status-card [title]="statusCard.title" [type]="statusCard.type">
-      <i [ngClass]="statusCard.iconClass"></i>
-    </ngx-status-card>
+<!-- Planification et progression -->
+<div class="row planning-section">
+  <!-- Planifications récentes -->
+  <div class="col-lg-8 col-md-12">
+    <ngx-planning-chart 
+      [data]="statistiques?.planificationsParJour"
+      [isLoading]="loading">
+    </ngx-planning-chart>
+  </div>
+  
+  <!-- Activité récente -->
+  <div class="col-lg-4 col-md-12">
+    <ngx-recent-activity
+      [activities]="recentActivities"
+      [isLoading]="loading">
+    </ngx-recent-activity>
   </div>
 </div>
 
-<div class="row">
-  <div class="col-xxxl-3 col-xxl-4 col-lg-5 col-md-6">
-    <ngx-temperature></ngx-temperature>
-  </div>
-
-  <div class="col-xxxl-9 col-xxl-8 col-lg-7 col-md-6">
-    <ngx-electricity></ngx-electricity>
+<!-- Équipes et Membres -->
+<div class="row teams-section">
+  <div class="col-12">
+    <ngx-teams-overview></ngx-teams-overview>
   </div>
 </div>
 
-<div class="row">
-  <div class="col-xxxl-9 col-xl-12">
-    <ngx-rooms></ngx-rooms>
+<!-- Progression des projets -->
+<div class="row projects-progress">
+  <div class="col-12">
+    <ngx-projects-progress 
+      [projects]="statistiques?.progressionProjets"
+      [isLoading]="loading">
+    </ngx-projects-progress>
   </div>
+</div>
 
-  <div class="col-xxxl-3 col-xxl-4 col-lg-7 col-md-6">
-    <ngx-contacts></ngx-contacts>
-  </div>
-
-  <div class="col-xxxl-3 col-xxl-4 col-lg-5 col-md-6">
-    <ngx-solar [chartValue]="solarValue"></ngx-solar>
-    <ngx-kitten></ngx-kitten>
-  </div>
-
-  <div class="col-xxxl-3 col-xxl-4 col-md-5">
-    <ngx-traffic></ngx-traffic>
-    <ngx-weather></ngx-weather>
-  </div>
-
-  <div class="col-xxxl-6 col-xxl-12 col-md-7">
-    <ngx-security-cameras></ngx-security-cameras>
+<!-- Actions rapides -->
+<div class="row quick-actions">
+  <div class="col-12">
+    <ngx-quick-actions></ngx-quick-actions>
   </div>
 </div>

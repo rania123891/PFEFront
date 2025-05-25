@@ -1,39 +1,28 @@
 import { NgModule } from '@angular/core';
-import { NbMenuModule, NbCardModule, NbButtonModule, NbIconModule, NbInputModule } from '@nebular/theme';
+import { NbMenuModule } from '@nebular/theme';
+
 import { ThemeModule } from '../@theme/theme.module';
 import { PagesComponent } from './pages.component';
 import { DashboardModule } from './dashboard/dashboard.module';
-import { ECommerceModule } from './e-commerce/e-commerce.module';
 import { PagesRoutingModule } from './pages-routing.module';
-import { MiscellaneousModule } from './miscellaneous/miscellaneous.module';
-import { MenuService } from '../@core/services/menu.service';
-import { AuthTestComponent } from './auth-test/auth-test.component';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { ProfileComponent } from './profile/profile.component';
+import { ProjetsModule } from './projets/projets.module';
+import { UtilisateursModule } from './utilisateurs/utilisateurs.module';
+import { AjouterProjetComponent } from './pages/projets/ajouter-projet/ajouter-projet.component';
+import { ModifierProjetComponent } from './pages/projets/modifier-projet/modifier-projet.component';
 
 @NgModule({
   imports: [
     PagesRoutingModule,
     ThemeModule,
     NbMenuModule,
-    NbIconModule,
-    NbInputModule,
     DashboardModule,
-    ECommerceModule,
-    MiscellaneousModule,
-    NbCardModule,
-    NbButtonModule,
-    CommonModule,
-    FormsModule,
+    ProjetsModule,
+    UtilisateursModule,
   ],
   declarations: [
     PagesComponent,
-    AuthTestComponent,
-    ProfileComponent,
-  ],
-  providers: [
-    MenuService,
+    AjouterProjetComponent,
+    ModifierProjetComponent,
   ],
 })
 export class PagesModule {

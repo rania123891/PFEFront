@@ -1,12 +1,14 @@
-import {Component, OnDestroy} from '@angular/core';
-import { NbThemeService } from '@nebular/theme';
-import { takeWhile } from 'rxjs/operators' ;
-import { SolarData } from '../../@core/data/solar';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { DashboardService } from '../../services/dashboard.service';
+import { StatistiquesData } from '../../services/statistique.service';
+import { takeWhile } from 'rxjs/operators';
 
-interface CardSettings {
-  title: string;
-  iconClass: string;
+interface RecentActivity {
   type: string;
+  description: string;
+  time: Date;
+  icon: string;
+  color: string;
 }
 
 @Component({
@@ -14,83 +16,97 @@ interface CardSettings {
   styleUrls: ['./dashboard.component.scss'],
   templateUrl: './dashboard.component.html',
 })
-export class DashboardComponent implements OnDestroy {
-
+export class DashboardComponent implements OnInit, OnDestroy {
   private alive = true;
-
-  solarValue: number;
-  lightCard: CardSettings = {
-    title: 'Light',
-    iconClass: 'nb-lightbulb',
-    type: 'primary',
-  };
-  rollerShadesCard: CardSettings = {
-    title: 'Roller Shades',
-    iconClass: 'nb-roller-shades',
-    type: 'success',
-  };
-  wirelessAudioCard: CardSettings = {
-    title: 'Wireless Audio',
-    iconClass: 'nb-audio',
-    type: 'info',
-  };
-  coffeeMakerCard: CardSettings = {
-    title: 'Coffee Maker',
-    iconClass: 'nb-coffee-maker',
-    type: 'warning',
-  };
-
-  statusCards: string;
-
-  commonStatusCardsSet: CardSettings[] = [
-    this.lightCard,
-    this.rollerShadesCard,
-    this.wirelessAudioCard,
-    this.coffeeMakerCard,
+  
+  statistiques: StatistiquesData | null = null;
+  loading = true;
+  error: string | null = null;
+  lastUpdate: Date | null = null;
+  
+  recentActivities: RecentActivity[] = [
+    {
+      type: 'Projet',
+      description: 'Nouveau projet créé: "Application Mobile"',
+      time: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
+      icon: 'folder-outline',
+      color: 'primary'
+    },
+    {
+      type: 'Tâche',
+      description: 'Tâche "Développement API" terminée',
+      time: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+      icon: 'checkmark-square-outline',
+      color: 'success'
+    },
+    {
+      type: 'Équipe',
+      description: 'Nouvel utilisateur ajouté à l\'équipe Alpha',
+      time: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
+      icon: 'people-outline',
+      color: 'info'
+    },
+    {
+      type: 'Planification',
+      description: 'Nouvelle planification créée pour demain',
+      time: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 hours ago
+      icon: 'calendar-outline',
+      color: 'warning'
+    }
   ];
 
-  statusCardsByThemes: {
-    default: CardSettings[];
-    cosmic: CardSettings[];
-    corporate: CardSettings[];
-    dark: CardSettings[];
-  } = {
-    default: this.commonStatusCardsSet,
-    cosmic: this.commonStatusCardsSet,
-    corporate: [
-      {
-        ...this.lightCard,
-        type: 'warning',
-      },
-      {
-        ...this.rollerShadesCard,
-        type: 'primary',
-      },
-      {
-        ...this.wirelessAudioCard,
-        type: 'danger',
-      },
-      {
-        ...this.coffeeMakerCard,
-        type: 'info',
-      },
-    ],
-    dark: this.commonStatusCardsSet,
-  };
+  constructor(private dashboardService: DashboardService) {}
 
-  constructor(private themeService: NbThemeService,
-              private solarService: SolarData) {
-    this.themeService.getJsTheme()
+  ngOnInit() {
+    // S'abonner aux données du dashboard
+    this.dashboardService.getStatistiques()
       .pipe(takeWhile(() => this.alive))
-      .subscribe(theme => {
-        this.statusCards = this.statusCardsByThemes[theme.name];
-    });
-
-    this.solarService.getSolarData()
-      .pipe(takeWhile(() => this.alive))
-      .subscribe((data) => {
-        this.solarValue = data;
+      .subscribe(data => {
+        this.statistiques = data;
       });
+
+    // S'abonner à l'état de chargement
+    this.dashboardService.isLoading()
+      .pipe(takeWhile(() => this.alive))
+      .subscribe(isLoading => {
+        this.loading = isLoading;
+      });
+
+    // S'abonner aux erreurs
+    this.dashboardService.getError()
+      .pipe(takeWhile(() => this.alive))
+      .subscribe(error => {
+        this.error = error;
+      });
+
+    // S'abonner à la date de dernière mise à jour
+    this.dashboardService.getLastUpdate()
+      .pipe(takeWhile(() => this.alive))
+      .subscribe(lastUpdate => {
+        this.lastUpdate = lastUpdate;
+      });
+  }
+
+  // Méthode pour actualiser manuellement les données
+  refreshData() {
+    this.dashboardService.refreshData();
+  }
+
+  // Méthode utilitaire pour formater la dernière mise à jour
+  getLastUpdateText(): string {
+    if (!this.lastUpdate) return '';
+    
+    const now = new Date();
+    const diffMs = now.getTime() - this.lastUpdate.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return 'Mis à jour à l\'instant';
+    if (diffMins < 60) return `Mis à jour il y a ${diffMins} min`;
+    
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `Mis à jour il y a ${diffHours}h`;
+    
+    return `Mis à jour le ${this.lastUpdate.toLocaleDateString()}`;
   }
 
   ngOnDestroy() {

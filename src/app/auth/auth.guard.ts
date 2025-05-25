@@ -13,11 +13,6 @@ export class AuthGuard implements CanActivate {
 
   canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): boolean {
     if (this.authService.isAuthenticated()) {
-      // Vérifier si la route nécessite un rôle admin
-      if (route.data['requiresAdmin'] && !this.authService.isAdmin()) {
-        this.router.navigate(['/pages/projet']);
-        return false;
-      }
       return true;
     }
 

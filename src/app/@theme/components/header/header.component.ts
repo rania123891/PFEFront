@@ -5,6 +5,7 @@ import { map, takeUntil } from 'rxjs/operators';
 import { Subject } from 'rxjs';
 import { AuthService } from '../../../auth/auth.service';
 import { Router } from '@angular/router';
+import { ProfileService } from '../../../services/profile.service';
 
 @Component({
   selector: 'ngx-header',
@@ -27,8 +28,8 @@ import { Router } from '@angular/router';
           <nb-user class="larger-user-picture"
                    [nbContextMenu]="userMenu"
                    [onlyPicture]="userPictureOnly"
-                   [name]="formatName(email)"
-                   picture="assets/images/imageutilisateur.png">
+                   [name]="getUserDisplayName()"
+                   [picture]="getUserProfilePhoto()">
           </nb-user>
         </nb-action>
       </nb-actions>
@@ -47,6 +48,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   private destroy$: Subject<void> = new Subject<void>();
   userPictureOnly: boolean = false;
   email: string = '';
+  userInfo: any = null;
 
   themes = [
     {
@@ -81,7 +83,8 @@ export class HeaderComponent implements OnInit, OnDestroy {
     private layoutService: LayoutService,
     private breakpointService: NbMediaBreakpointsService,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private profileService: ProfileService
   ) {
     this.menuService.onItemClick()
       .pipe(takeUntil(this.destroy$))
@@ -96,17 +99,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.currentTheme = this.themeService.currentTheme;
-
-    // Récupérer l'email depuis le token JWT
-    const token = this.authService.getToken();
-    if (token) {
-      try {
-        const tokenData = JSON.parse(atob(token.split('.')[1]));
-        this.email = tokenData.email || '';
-      } catch (e) {
-        console.error('Erreur lors du décodage du token:', e);
-      }
-    }
+    this.loadUserData();
 
     const { xl } = this.breakpointService.getBreakpointsMap();
     this.themeService.onMediaQueryChange()
@@ -122,6 +115,50 @@ export class HeaderComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$),
       )
       .subscribe(themeName => this.currentTheme = themeName);
+  }
+
+  private loadUserData() {
+    // Récupérer l'email depuis le token JWT
+    const token = this.authService.getToken();
+    if (token) {
+      try {
+        const tokenData = JSON.parse(atob(token.split('.')[1]));
+        this.email = tokenData.email || '';
+        const userId = tokenData.nameid;
+        
+        // Charger le profil complet depuis l'API
+        if (userId) {
+          this.profileService.getUserProfile(parseInt(userId)).subscribe({
+            next: (profile) => {
+              this.userInfo = profile;
+            },
+            error: (error) => {
+              // Fallback avec les données du token
+              this.userInfo = {
+                email: tokenData.email,
+                nom: tokenData.nom || '',
+                prenom: tokenData.prenom || '',
+                role: tokenData.role,
+                profilePhotoUrl: null
+              };
+            }
+          });
+        }
+      } catch (e) {
+        console.error('Erreur lors du décodage du token:', e);
+      }
+    }
+  }
+
+  getUserProfilePhoto(): string {
+    if (this.userInfo?.profilePhotoUrl) {
+      if (this.userInfo.profilePhotoUrl.startsWith('/')) {
+        const fileName = this.userInfo.profilePhotoUrl.split('/').pop();
+        return `http://localhost:5093/user/api/Utilisateur/image/${fileName}`;
+      }
+      return this.userInfo.profilePhotoUrl;
+    }
+    return 'assets/images/imageutilisateur.png';
   }
 
   logout() {
@@ -148,14 +185,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
     return false;
   }
 
-  formatName(email: string): string {
-    if (!email) return '';
-    // Prendre la partie avant le @
-    const fullName = email.split('@')[0];
-    // Séparer le nom et le prénom (en supposant qu'ils sont séparés par un point)
-    const [prenom, nom] = fullName.split('.');
-    if (!prenom || !nom) return fullName;
-    // Mettre en majuscule la première lettre et en minuscule le reste
-    return `${prenom.charAt(0).toUpperCase() + prenom.slice(1)} ${nom.charAt(0).toUpperCase() + nom.slice(1)}`;
+  getUserDisplayName(): string {
+    if (!this.userInfo || !this.userInfo.prenom || !this.userInfo.nom) {
+      return this.email;
+    }
+    return `${this.userInfo.prenom} ${this.userInfo.nom}`;
   }
 }

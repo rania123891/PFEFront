@@ -426,3 +426,124 @@ nb-card-body {
     }
   }
 }
+
+// Styles pour les exemples de planification
+.header-subtitle {
+  font-size: 1.2rem;
+  color: #8f9bb3;
+  margin-top: 1rem;
+  font-weight: 400;
+}
+
+.examples-card {
+  margin-bottom: 2rem;
+  
+  nb-card-header {
+    background: linear-gradient(135deg, #f8f9fe 0%, #e7ecf7 100%);
+    border-bottom: 1px solid rgba(51, 102, 255, 0.1);
+    
+    h5 {
+      margin: 0;
+      color: #1a1f33;
+      font-weight: 600;
+    }
+  }
+}
+
+.examples-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.example-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: rgba(51, 102, 255, 0.03);
+  border-radius: 15px;
+  border: 1px solid rgba(51, 102, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(51, 102, 255, 0.08);
+    border-color: rgba(51, 102, 255, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(51, 102, 255, 0.15);
+  }
+
+  .example-icon {
+    font-size: 1.5rem;
+    color: #3366ff;
+    flex-shrink: 0;
+    margin-top: 0.2rem;
+  }
+
+  .example-text {
+    line-height: 1.5;
+    color: #1a1f33;
+
+    strong {
+      color: #3366ff;
+      font-weight: 600;
+    }
+  }
+}
+
+// Styles pour les messages de réponse améliorés
+.response-message {
+  margin: 2rem 0;
+  
+  .message-content {
+    padding: 1.5rem;
+    border-radius: 15px;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+
+    &.message-success {
+      background: rgba(0, 214, 143, 0.1);
+      border: 1px solid rgba(0, 214, 143, 0.2);
+      
+      .response-icon {
+        color: #00d68f;
+      }
+    }
+
+    &.message-error {
+      background: rgba(255, 61, 113, 0.1);
+      border: 1px solid rgba(255, 61, 113, 0.2);
+      
+      .response-icon {
+        color: #ff3d71;
+      }
+    }
+
+    &.message-warning {
+      background: rgba(255, 170, 0, 0.1);
+      border: 1px solid rgba(255, 170, 0, 0.2);
+      
+      .response-icon {
+        color: #ffaa00;
+      }
+    }
+
+    .response-icon {
+      font-size: 1.5rem;
+      flex-shrink: 0;
+      margin-top: 0.2rem;
+    }
+
+    .response-text {
+      flex: 1;
+      margin: 0;
+      white-space: pre-wrap;
+      font-family: inherit;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: #1a1f33;
+    }
+  }
+} 

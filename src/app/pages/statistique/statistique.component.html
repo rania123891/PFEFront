@@ -1,0 +1,163 @@
+<div class="statistique-container">
+  <!-- En-tête -->
+  <div class="header-section">
+    <h1>Tableaux de Bord et Statistiques</h1>
+    <p>Vue d'ensemble de vos données de projet</p>
+  </div>
+
+  <!-- Spinner de chargement -->
+  <div *ngIf="loading" class="loading-container">
+    <nb-spinner size="large"></nb-spinner>
+    <p>Chargement des statistiques...</p>
+  </div>
+
+  <!-- Contenu principal -->
+  <div *ngIf="!loading" class="statistics-content">
+    <!-- Cartes de résumé -->
+    <div class="row">
+      <div class="col-md-3">
+        <nb-card class="stat-card projects-card">
+          <nb-card-body>
+            <div class="stat-content">
+              <div class="stat-icon">
+                <nb-icon icon="folder-outline"></nb-icon>
+              </div>
+              <div class="stat-info">
+                <h3>{{ totalProjets }}</h3>
+                <p>Projets Totaux</p>
+              </div>
+            </div>
+          </nb-card-body>
+        </nb-card>
+      </div>
+
+      <div class="col-md-3">
+        <nb-card class="stat-card tasks-card">
+          <nb-card-body>
+            <div class="stat-content">
+              <div class="stat-icon">
+                <nb-icon icon="checkmark-square-outline"></nb-icon>
+              </div>
+              <div class="stat-info">
+                <h3>{{ totalTaches }}</h3>
+                <p>Tâches Totales</p>
+              </div>
+            </div>
+          </nb-card-body>
+        </nb-card>
+      </div>
+
+      <div class="col-md-3">
+        <nb-card class="stat-card users-card">
+          <nb-card-body>
+            <div class="stat-content">
+              <div class="stat-icon">
+                <nb-icon icon="person-outline"></nb-icon>
+              </div>
+              <div class="stat-info">
+                <h3>{{ totalUtilisateurs }}</h3>
+                <p>Utilisateurs</p>
+              </div>
+            </div>
+          </nb-card-body>
+        </nb-card>
+      </div>
+
+      <div class="col-md-3">
+        <nb-card class="stat-card teams-card">
+          <nb-card-body>
+            <div class="stat-content">
+              <div class="stat-icon">
+                <nb-icon icon="people-outline"></nb-icon>
+              </div>
+              <div class="stat-info">
+                <h3>{{ totalEquipes }}</h3>
+                <p>Équipes</p>
+              </div>
+            </div>
+          </nb-card-body>
+        </nb-card>
+      </div>
+    </div>
+
+    <!-- Graphiques -->
+    <div class="row charts-row">
+      <!-- Graphique en secteurs - Répartition des tâches -->
+      <div class="col-md-6">
+        <nb-card class="chart-card">
+          <nb-card-header>
+            <h5>Répartition des Tâches</h5>
+          </nb-card-header>
+          <nb-card-body>
+            <div echarts [options]="pieChartOption" class="chart-container"></div>
+          </nb-card-body>
+        </nb-card>
+      </div>
+
+      <!-- Graphique en barres - Projets par mois -->
+      <div class="col-md-6">
+        <nb-card class="chart-card">
+          <nb-card-header>
+            <h5>Projets par Mois</h5>
+          </nb-card-header>
+          <nb-card-body>
+            <div echarts [options]="barChartOption" class="chart-container"></div>
+          </nb-card-body>
+        </nb-card>
+      </div>
+    </div>
+
+    <div class="row charts-row">
+      <!-- Graphique linéaire - Planifications -->
+      <div class="col-md-6">
+        <nb-card class="chart-card">
+          <nb-card-header>
+            <h5>Planifications Hebdomadaires</h5>
+          </nb-card-header>
+          <nb-card-body>
+            <div echarts [options]="lineChartOption" class="chart-container"></div>
+          </nb-card-body>
+        </nb-card>
+      </div>
+
+      <!-- Graphique de progression -->
+      <div class="col-md-6">
+        <nb-card class="chart-card">
+          <nb-card-header>
+            <h5>Progression des Projets</h5>
+          </nb-card-header>
+          <nb-card-body>
+            <div echarts [options]="progressChartOption" class="chart-container"></div>
+          </nb-card-body>
+        </nb-card>
+      </div>
+    </div>
+
+    <!-- Section d'informations supplémentaires -->
+    <div class="row">
+      <div class="col-md-12">
+        <nb-card class="info-card">
+          <nb-card-header>
+            <h5>Informations Système</h5>
+          </nb-card-header>
+          <nb-card-body>
+            <div class="info-grid">
+              <div class="info-item">
+                <strong>Dernière mise à jour:</strong>
+                <span>{{ currentDate | date:'dd/MM/yyyy HH:mm' }}</span>
+              </div>
+              <div class="info-item">
+                <strong>Statut du système:</strong>
+                <span class="status-active">Actif</span>
+              </div>
+              <div class="info-item">
+                <strong>Performance:</strong>
+                <span class="performance-good">Excellente</span>
+              </div>
+            </div>
+          </nb-card-body>
+        </nb-card>
+      </div>
+    </div>
+  </div>
+</div> 

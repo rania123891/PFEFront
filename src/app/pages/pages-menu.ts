@@ -2,62 +2,75 @@ import { NbMenuItem } from '@nebular/theme';
 
 export const MENU_ITEMS: NbMenuItem[] = [
   {
-    title: 'Tableau de bord',
+    title: 'Dashboard',
     icon: 'home-outline',
     link: '/pages/dashboard',
     home: true,
   },
   {
-    title: 'Projet',
+    title: 'Messages',
+    icon: 'message-circle-outline',
+    link: '/pages/messages',
+  },
+  {
+    group: true,
+    title: 'PARAMETRAGE',
+  },
+  {
+    title: 'Projets',
     icon: 'folder-outline',
-    children: [
-      {
-        title: 'Liste des projets',
-        icon: 'list-outline',
-        children: [] // Les projets seront chargés dynamiquement
-      },
-      {
-        title: 'Afficher tous les projets',
-        icon: 'grid-outline',
-        link: '/pages/projet'
-      },
-      {
-        title: 'Ajouter un projet',
-        icon: 'plus-outline',
-        link: '/pages/projet/nouveau'
-      }
-    ]
+    link: '/pages/projets',
+  },
+  {
+    title: 'Tâches',
+    icon: 'checkmark-square-outline',
+    link: '/pages/taches',
   },
   {
     title: 'Équipes',
     icon: 'people-outline',
-    children: [
-      {
-        title: 'Liste des équipes',
-        icon: 'list-outline',
-        link: '/pages/equipes',
-      },
-      {
-        title: 'Ajouter une équipe',
-        icon: 'person-add-outline',
-        link: '/pages/equipes/ajouter',
-      },
-    ],
+    link: '/pages/equipes',
+  },
+  {
+    title: 'Membres Equipe',
+    icon: 'person-outline',
+    link: '/pages/equipes/membres',
   },
   {
     title: 'Utilisateurs',
     icon: 'person-outline',
-    children: [
-      {
-        title: 'Liste des utilisateurs',
-        icon: 'list-outline',
-        link: '/pages/utilisateurs/liste',
-      },
-    ],
+    link: '/pages/utilisateurs',
   },
   {
-    title: 'Assistant IA',
-    icon: 'mic-outline',
-    link: '/pages/assistant', // Assure-toi de créer cette route !
-  }
+    group: true,
+    title: 'TABLESHEET',
+  },
+  {
+    title: 'Planification de travail',
+    icon: 'calendar-outline',
+    link: '/pages/planification',
+  },
+  {
+    group: true,
+    title: 'AI ASSISTANT',
+  },
+  {
+    title: 'Assistant',
+    icon: 'bulb-outline',
+    link: '/pages/assistant',
+  },
+  {
+    title: 'Prédictions IA',
+    icon: 'trending-up-outline',
+    link: '/pages/predictions',
+  },
+  {
+    group: true,
+    title: 'REPORTS',
+  },
+  {
+    title: 'Statistique',
+    icon: 'bar-chart-2-outline',
+    link: '/pages/statistique',
+  },
 ]; 

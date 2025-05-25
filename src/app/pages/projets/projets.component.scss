@@ -1,0 +1,265 @@
+@import '../../@theme/styles/themes';
+
+nb-card {
+  margin-bottom: 0;
+  border: none;
+  box-shadow: none;
+  background-color: #f7f9fc;
+}
+
+nb-card-header {
+  padding: 1.5rem;
+  border-bottom: none;
+  background-color: transparent;
+  
+  h5 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #222b45;
+  }
+}
+
+nb-card-body {
+  padding: 0 1.5rem 1.5rem;
+}
+
+.add-button {
+  background-color: #3366ff;
+  border-color: #3366ff;
+  text-transform: uppercase;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  height: auto;
+  line-height: 1;
+
+  nb-icon {
+    margin-right: 0.5rem;
+  }
+}
+
+.search-container {
+  margin-bottom: 1.5rem;
+  
+  input {
+    background-color: white;
+    border: 1px solid #e4e9f2;
+    border-radius: 2rem;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9375rem;
+    
+    &::placeholder {
+      color: #8f9bb3;
+    }
+
+    &:focus {
+      border-color: #3366ff;
+    }
+  }
+}
+
+.table-container {
+  background-color: white;
+  border-radius: 1rem;
+  padding: 1rem;
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 0.5rem;
+  margin-bottom: 0;
+
+  th {
+    padding: 0.75rem 1.25rem;
+    color: #8f9bb3;
+    font-weight: 500;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: none;
+    background-color: transparent;
+  }
+
+  td {
+    padding: 1rem 1.25rem;
+    vertical-align: middle;
+    background-color: #f7f9fc;
+    border: none;
+    font-size: 0.9375rem;
+    color: #222b45;
+    
+    &:first-child {
+      border-top-left-radius: 0.75rem;
+      border-bottom-left-radius: 0.75rem;
+    }
+    
+    &:last-child {
+      border-top-right-radius: 0.75rem;
+      border-bottom-right-radius: 0.75rem;
+    }
+  }
+
+  tbody tr {
+    transition: transform 0.2s;
+    
+    &:hover {
+      transform: translateY(-2px);
+      
+      td {
+        background-color: #f1f3f9;
+      }
+    }
+  }
+}
+
+.status-cell {
+  padding: 0.5rem 1.25rem !important;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.4rem 1.25rem;
+  border-radius: 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 100px;
+  text-align: center;
+  
+  &.status-success {
+    background-color: #e6fff2;
+    color: #00d68f;
+  }
+  
+  &.status-info {
+    background-color: #edf6ff;
+    color: #3366ff;
+  }
+  
+  &.status-danger {
+    background-color: #ffe8ef;
+    color: #ff3d71;
+  }
+}
+
+.actions-cell {
+  white-space: nowrap;
+  text-align: right;
+  padding: 0.5rem 1.25rem !important;
+  
+  .action-button {
+    padding: 0.5rem;
+    margin: 0 0.25rem;
+    height: 2.25rem;
+    width: 2.25rem;
+    border-radius: 0.5rem;
+    
+    nb-icon {
+      font-size: 1.25rem;
+    }
+
+    &[status="info"] {
+      color: #3366ff;
+    }
+
+    &[status="danger"] {
+      color: #ff3d71;
+    }
+
+    &:hover {
+      background-color: #edf1f7;
+    }
+  }
+}
+
+.actions-container {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-start;
+  align-items: center;
+
+  button {
+    padding: 0.5rem;
+    height: 2.5rem;
+    width: 2.5rem;
+
+    nb-icon {
+      font-size: 1.25rem;
+    }
+  }
+}
+
+nb-badge {
+  padding: 0.5rem 1rem;
+  border-radius: 1rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  display: inline-block;
+  line-height: 1;
+
+  &.status-success {
+    background-color: #2ce69b;
+    color: white;
+  }
+
+  &.status-info {
+    background-color: #42aaff;
+    color: white;
+  }
+
+  &.status-danger {
+    background-color: #ff3d71;
+    color: white;
+  }
+}
+
+input[nbInput] {
+  width: 240px;
+  margin-right: 1rem;
+}
+
+// Styles pour le formulaire modal
+.form-group {
+  margin-bottom: 1.5rem;
+
+  .label {
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+  }
+
+  .error {
+    color: var(--color-danger-default);
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    display: block;
+  }
+}
+
+.form-actions {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.text-danger {
+  color: nb-theme(color-danger-default);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+nb-card.modal-card {
+  max-width: 600px;
+  width: 100%;
+  margin: 0 auto;
+} 

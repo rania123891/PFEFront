@@ -1,0 +1,230 @@
+<nb-layout>
+  <nb-layout-column>
+    <div class="predictions-page">
+      <!-- En-tête avec titre et actions -->
+      <div class="header-section">
+        <div class="title-container">
+          <nb-icon icon="trending-up-outline" class="header-icon"></nb-icon>
+          <div class="title-content">
+            <h1 class="page-title">🧠 Prédictions IA</h1>
+            <p class="page-subtitle">Estimations intelligentes de durée des tâches</p>
+          </div>
+        </div>
+        
+        <div class="action-buttons">
+          <button nbButton status="info" 
+                  (click)="afficherStatistiques()" 
+                  [disabled]="loading"
+                  outline>
+            <nb-icon icon="bar-chart-outline"></nb-icon>
+            Statistiques
+          </button>
+          
+          <button nbButton status="primary" 
+                  (click)="entrainerModele()" 
+                  [disabled]="loading">
+            <nb-icon icon="flash-outline"></nb-icon>
+            {{ trainedRecently ? 'Re-entraîner' : 'Entraîner IA' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Cartes de statistiques globales -->
+      <div class="stats-overview" *ngIf="predictions.length > 0">
+        <nb-card class="stat-card total-time">
+          <nb-card-body>
+            <div class="stat-content">
+              <div class="stat-icon">
+                <nb-icon icon="clock-outline"></nb-icon>
+              </div>
+              <div class="stat-details">
+                <h3>{{ totalHeures.toFixed(1) }}h</h3>
+                <p>Temps total estimé</p>
+              </div>
+            </div>
+          </nb-card-body>
+        </nb-card>
+
+        <nb-card class="stat-card confidence">
+          <nb-card-body>
+            <div class="stat-content">
+              <div class="stat-icon">
+                <nb-icon icon="checkmark-circle-outline"></nb-icon>
+              </div>
+              <div class="stat-details">
+                <h3>{{ (moyenneConfiance * 33.33).toFixed(0) }}%</h3>
+                <p>Confiance moyenne</p>
+              </div>
+            </div>
+          </nb-card-body>
+        </nb-card>
+
+        <nb-card class="stat-card workload">
+          <nb-card-body>
+            <div class="stat-content">
+              <div class="stat-icon">
+                <nb-icon icon="trending-up-outline"></nb-icon>
+              </div>
+              <div class="stat-details">
+                <h3>{{ chargeHebdomadaire.toFixed(1) }}h</h3>
+                <p>Charge hebdomadaire</p>
+                <div class="progress-container">
+                  <nb-progress-bar [value]="getProgressBarValue()" 
+                                   [status]="getProgressBarValue() > 80 ? 'danger' : 'success'">
+                  </nb-progress-bar>
+                </div>
+              </div>
+            </div>
+          </nb-card-body>
+        </nb-card>
+
+        <nb-card class="stat-card predictions-count">
+          <nb-card-body>
+            <div class="stat-content">
+              <div class="stat-icon">
+                <nb-icon icon="layers-outline"></nb-icon>
+              </div>
+              <div class="stat-details">
+                <h3>{{ predictions.length }}</h3>
+                <p>Prédictions actives</p>
+              </div>
+            </div>
+          </nb-card-body>
+        </nb-card>
+      </div>
+
+      <!-- État de chargement -->
+      <div class="loading-section" *ngIf="loading">
+        <nb-card>
+          <nb-card-body>
+            <div class="loading-content">
+              <nb-spinner size="large" status="primary"></nb-spinner>
+              <h4>Génération des prédictions IA...</h4>
+              <p>Analyse des patterns et calcul des estimations</p>
+            </div>
+          </nb-card-body>
+        </nb-card>
+      </div>
+
+      <!-- Statistiques ML détaillées -->
+      <nb-card class="ml-stats-card" *ngIf="showStats && mlStats">
+        <nb-card-header>
+          <div class="stats-header">
+            <nb-icon icon="cpu-outline"></nb-icon>
+            <span>Statistiques du Modèle IA</span>
+          </div>
+          <button nbButton status="basic" size="small" (click)="showStats = false">
+            <nb-icon icon="close-outline"></nb-icon>
+          </button>
+        </nb-card-header>
+        <nb-card-body>
+          <pre class="stats-content">{{ mlStats }}</pre>
+        </nb-card-body>
+      </nb-card>
+
+      <!-- Répartition par types de tâches -->
+      <nb-card class="types-distribution" *ngIf="predictions.length > 0">
+        <nb-card-header>
+          <nb-icon icon="pie-chart-outline"></nb-icon>
+          <span>Répartition par Types de Tâches</span>
+        </nb-card-header>
+        <nb-card-body>
+          <div class="types-grid">
+            <div class="type-item" *ngFor="let typeData of getTopTypes()">
+              <div class="type-info">
+                <nb-icon [icon]="getTaskTypeIcon(typeData.type)"></nb-icon>
+                <span class="type-name">{{ typeData.type }}</span>
+              </div>
+              <div class="type-stats">
+                <span class="count">{{ typeData.count }}</span>
+                <div class="percentage-bar">
+                  <div class="percentage-fill" 
+                       [style.width.%]="typeData.percentage">
+                  </div>
+                </div>
+                <span class="percentage">{{ typeData.percentage.toFixed(1) }}%</span>
+              </div>
+            </div>
+          </div>
+        </nb-card-body>
+      </nb-card>
+
+      <!-- Grille des prédictions -->
+      <div class="predictions-grid" *ngIf="predictions.length > 0 && !loading">
+        <nb-card class="prediction-card" 
+                 *ngFor="let predCard of predictions" 
+                 [ngClass]="'urgency-' + predCard.urgencyLevel">
+          <nb-card-header>
+            <div class="card-header-content">
+              <div class="task-info">
+                <nb-icon [icon]="getTaskTypeIcon(predCard.prediction.typeTache)" 
+                         class="task-icon"></nb-icon>
+                <div class="task-details">
+                  <h4 class="task-title">{{ predCard.tache.titre }}</h4>
+                  <p class="task-type-info">{{ predCard.prediction.typeTache }}</p>
+                </div>
+              </div>
+              <div class="urgency-badge" 
+                   [style.background-color]="getUrgencyColor(predCard.urgencyLevel)">
+                {{ getUrgencyLabel(predCard.urgencyLevel) }}
+              </div>
+            </div>
+          </nb-card-header>
+
+          <nb-card-body>
+            <div class="prediction-content">
+              <!-- Durée estimée -->
+              <div class="main-prediction">
+                <div class="duration-container">
+                  <nb-icon icon="clock-outline" class="duration-icon"></nb-icon>
+                  <span class="duration-text">{{ predCard.prediction.dureeFormatee }}</span>
+                </div>
+                <div class="completion-date">
+                  <nb-icon icon="calendar-outline"></nb-icon>
+                  <span>{{ predCard.prediction.dateEstimeeCompletion | date:'dd/MM/yyyy HH:mm' }}</span>
+                </div>
+              </div>
+
+              <!-- Confiance et type -->
+              <div class="prediction-meta">
+                <div class="confidence-badge" 
+                     [style.color]="getConfidenceColor(predCard.prediction.confiance)">
+                  <nb-icon icon="shield-outline"></nb-icon>
+                  <span>{{ predCard.prediction.confiance }}</span>
+                </div>
+                <div class="task-type">
+                  <span>{{ predCard.prediction.typeTache }}</span>
+                </div>
+              </div>
+
+              <!-- Facteurs influents -->
+              <div class="factors-section" *ngIf="predCard.prediction.facteursInfluents?.length > 0">
+                <h5>🎯 Facteurs influents :</h5>
+                <div class="factors-list">
+                  <div class="factor-item" *ngFor="let facteur of predCard.prediction.facteursInfluents">
+                    {{ facteur }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </nb-card-body>
+        </nb-card>
+      </div>
+
+      <!-- Message si aucune prédiction -->
+      <nb-card class="empty-state" *ngIf="predictions.length === 0 && !loading">
+        <nb-card-body>
+          <div class="empty-content">
+            <nb-icon icon="inbox-outline" class="empty-icon"></nb-icon>
+            <h3>Aucune prédiction disponible</h3>
+            <p>Créez des tâches et des projets pour commencer à générer des prédictions IA.</p>
+            <button nbButton status="primary" (click)="entrainerModele()">
+              <nb-icon icon="flash-outline"></nb-icon>
+              Entraîner le modèle IA
+            </button>
+          </div>
+        </nb-card-body>
+      </nb-card>
+    </div>
+  </nb-layout-column>
+</nb-layout> 

@@ -1,0 +1,100 @@
+<div class="row">
+  <div class="col-md-12">
+    <!-- Formulaire d'ajout -->
+    <nb-card *ngIf="showForm">
+      <nb-card-header>
+        <h5>Ajouter une tâche</h5>
+      </nb-card-header>
+      <nb-card-body>
+        <form [formGroup]="tacheForm" (ngSubmit)="onSubmit()">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="label">Titre *</label>
+                <input
+                  nbInput
+                  fullWidth
+                  formControlName="titre"
+                  placeholder="Entrez le titre de la tâche"
+                  [status]="tacheForm.get('titre').touched && tacheForm.get('titre').invalid ? 'danger' : 'basic'"
+                >
+                <span class="error" *ngIf="tacheForm.get('titre').touched && tacheForm.get('titre').invalid">
+                  Le titre est requis
+                </span>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="label">Priorité *</label>
+                <nb-select fullWidth formControlName="priorite">
+                  <nb-option [value]="PrioriteTache.Faible">Faible</nb-option>
+                  <nb-option [value]="PrioriteTache.Moyenne">Moyenne</nb-option>
+                  <nb-option [value]="PrioriteTache.Elevee">Élevée</nb-option>
+                </nb-select>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button nbButton status="basic" type="button" (click)="fermerFormulaire()">
+              Annuler
+            </button>
+            <button nbButton status="primary" type="submit" [disabled]="!tacheForm.valid" class="ml-2">
+              Ajouter
+            </button>
+          </div>
+        </form>
+      </nb-card-body>
+    </nb-card>
+
+    <!-- Liste des tâches -->
+    <nb-card>
+      <nb-card-header class="d-flex justify-content-between align-items-center">
+        <h5>LISTE DES TÂCHES</h5>
+        <button nbButton status="primary" class="add-button" (click)="openAddForm()">
+          <nb-icon icon="plus-outline"></nb-icon>
+          AJOUTER UNE TÂCHE
+        </button>
+      </nb-card-header>
+
+      <nb-card-body>
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>TITRE</th>
+                <th>PRIORITÉ</th>
+                <th>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let tache of taches">
+                <td>{{ tache.titre }}</td>
+                <td class="priority-cell">
+                  <span class="priority-badge" [ngClass]="getPriorityClass(tache.priorite)">
+                    {{ tacheService.getPrioriteLabel(tache.priorite) }}
+                  </span>
+                </td>
+                <td class="actions-cell">
+                  <div class="actions-container">
+                    <button nbButton ghost status="info" class="action-button" (click)="editTache(tache)">
+                      <nb-icon icon="edit-2-outline"></nb-icon>
+                    </button>
+                    <button nbButton ghost status="danger" class="action-button" (click)="deleteTache(tache.id)">
+                      <nb-icon icon="trash-2-outline"></nb-icon>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              <tr *ngIf="taches.length === 0">
+                <td colspan="3" class="text-center">
+                  Aucune tâche trouvée
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </nb-card-body>
+    </nb-card>
+  </div>
+</div> 

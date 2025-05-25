@@ -1,0 +1,277 @@
+<div class="container">
+  <!-- Date Picker Section -->
+  <div class="date-picker-section">
+    <div class="select-date">
+      <label>Sélectionner une date</label>
+      <input nbInput placeholder="mm/dd/yyyy" [nbDatepicker]="datepicker" 
+             [(ngModel)]="selectedDate" (ngModelChange)="onDateChange($event)">
+      <nb-datepicker #datepicker></nb-datepicker>
+    </div>
+  </div>
+
+  <!-- Task Planning Form -->
+  <div class="task-planning-form">
+    <div class="form-header">
+      <h5 *ngIf="!isEditMode">Nouvelle planification</h5>
+      <h5 *ngIf="isEditMode">Modifier la planification</h5>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Heure début</label>
+        <input nbInput type="time" [(ngModel)]="heureDebut" placeholder="08:00">
+      </div>
+      <div class="form-group">
+        <label>Heure fin</label>
+        <input nbInput type="time" [(ngModel)]="heureFin" placeholder="09:00">
+      </div>
+      <div class="form-group project-select">
+        <label>Projet</label>
+        <nb-select placeholder="Choisir un projet" [(ngModel)]="selectedProjet" (selectedChange)="onProjetChange($event)">
+          <nb-option *ngFor="let projet of projets" [value]="projet.id">
+            {{ projet.nom }}
+          </nb-option>
+        </nb-select>
+      </div>
+      <div class="form-group task-select">
+        <label>Tâche</label>
+        <nb-select placeholder="Choisir une tâche" [(ngModel)]="selectedTache" (selectedChange)="onTacheChange($event)" [disabled]="!selectedProjet">
+          <nb-option *ngFor="let tache of taches" [value]="tache.id">
+            {{ tache.titre }}
+          </nb-option>
+        </nb-select>
+      </div>
+      <div class="form-group description-input">
+        <label>Description</label>
+        <input nbInput placeholder="Description de la planification" [(ngModel)]="description">
+      </div>
+      <div class="form-group button-section">
+        <div class="button-group">
+          <button nbButton status="success" (click)="onSubmit()" [disabled]="!selectedProjet || !selectedTache">
+            <nb-icon [icon]="isEditMode ? 'save-outline' : 'plus-outline'"></nb-icon>
+            {{ isEditMode ? 'Modifier' : 'Ajouter' }}
+          </button>
+          <button *ngIf="isEditMode" nbButton status="basic" (click)="cancelEdit()" style="margin-left: 10px;">
+            <nb-icon icon="close-outline"></nb-icon>
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kanban Board -->
+  <div class="kanban-board">
+    <!-- To Do Column -->
+    <div class="kanban-column todo-column">
+      <div class="column-header">
+        <h6>To Do</h6>
+        <div class="header-line"></div>
+      </div>
+      <div class="tasks-container">
+        <div class="task-card" *ngFor="let planification of getPlanificationsByEtat(EtatListe.Todo)">
+          <div class="task-header">
+            <h6>{{ planification.tache?.titre || 'Tâche' }}</h6>
+            <nb-actions size="tiny">
+              <nb-action (click)="updateStatut(planification, EtatListe.EnCours)" 
+                         nbTooltip="Passer en cours">
+                <nb-icon icon="arrow-forward-outline"></nb-icon>
+              </nb-action>
+              <nb-action (click)="editPlanification(planification)" 
+                         nbTooltip="Modifier">
+                <nb-icon icon="edit-outline"></nb-icon>
+              </nb-action>
+              <nb-action (click)="deletePlanification(planification)" 
+                         nbTooltip="Supprimer">
+                <nb-icon icon="trash-2-outline"></nb-icon>
+              </nb-action>
+            </nb-actions>
+          </div>
+          <p class="task-description" *ngIf="planification.description">{{ planification.description }}</p>
+          <div class="task-time">
+            <nb-icon icon="clock-outline"></nb-icon>
+            {{ planification.heureDebut }} - {{ planification.heureFin }}
+          </div>
+          <div class="task-footer">
+            <div class="task-project">
+              <span class="project-badge">{{ planification.projet?.nom || 'Projet' }}</span>
+            </div>
+            <!-- Avatar utilisateur assigné -->
+            <div class="task-assignee" *ngIf="planification.tache?.assigneId && getAssignedUser(planification.tache.assigneId) as assignedUser">
+              <div class="user-avatar" 
+                   [style.background-color]="getUserColor(assignedUser.id)"
+                   [title]="assignedUser.prenom + ' ' + assignedUser.nom">
+                {{ getUserInitials(assignedUser) }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="no-tasks" *ngIf="getPlanificationsByEtat(EtatListe.Todo).length === 0">
+          Aucune tâche planifiée
+        </div>
+      </div>
+    </div>
+
+    <!-- On Progress Column -->
+    <div class="kanban-column progress-column">
+      <div class="column-header">
+        <h6>En Cours</h6>
+        <div class="header-line"></div>
+      </div>
+      <div class="tasks-container">
+        <div class="task-card" *ngFor="let planification of getPlanificationsByEtat(EtatListe.EnCours)">
+          <div class="task-header">
+            <h6>{{ planification.tache?.titre || 'Tâche' }}</h6>
+            <nb-actions size="tiny">
+              <nb-action (click)="updateStatut(planification, EtatListe.Todo)" 
+                         nbTooltip="Retour en To Do">
+                <nb-icon icon="arrow-back-outline"></nb-icon>
+              </nb-action>
+              <nb-action (click)="updateStatut(planification, EtatListe.Test)" 
+                         nbTooltip="Passer en test">
+                <nb-icon icon="arrow-forward-outline"></nb-icon>
+              </nb-action>
+              <nb-action (click)="editPlanification(planification)" 
+                         nbTooltip="Modifier">
+                <nb-icon icon="edit-outline"></nb-icon>
+              </nb-action>
+              <nb-action (click)="deletePlanification(planification)" 
+                         nbTooltip="Supprimer">
+                <nb-icon icon="trash-2-outline"></nb-icon>
+              </nb-action>
+            </nb-actions>
+          </div>
+          <p class="task-description" *ngIf="planification.description">{{ planification.description }}</p>
+          <div class="task-time">
+            <nb-icon icon="clock-outline"></nb-icon>
+            {{ planification.heureDebut }} - {{ planification.heureFin }}
+          </div>
+          <div class="task-footer">
+            <div class="task-project">
+              <span class="project-badge">{{ planification.projet?.nom || 'Projet' }}</span>
+            </div>
+            <!-- Avatar utilisateur assigné -->
+            <div class="task-assignee" *ngIf="planification.tache?.assigneId && getAssignedUser(planification.tache.assigneId) as assignedUser">
+              <div class="user-avatar" 
+                   [style.background-color]="getUserColor(assignedUser.id)"
+                   [title]="assignedUser.prenom + ' ' + assignedUser.nom">
+                {{ getUserInitials(assignedUser) }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="no-tasks" *ngIf="getPlanificationsByEtat(EtatListe.EnCours).length === 0">
+          Aucune tâche en cours
+        </div>
+      </div>
+    </div>
+
+    <!-- Test Column -->
+    <div class="kanban-column test-column">
+      <div class="column-header">
+        <h6>Test</h6>
+        <div class="header-line"></div>
+      </div>
+      <div class="tasks-container">
+        <div class="task-card" *ngFor="let planification of getPlanificationsByEtat(EtatListe.Test)">
+          <div class="task-header">
+            <h6>{{ planification.tache?.titre || 'Tâche' }}</h6>
+            <nb-actions size="tiny">
+              <nb-action (click)="updateStatut(planification, EtatListe.EnCours)" 
+                         nbTooltip="Retour en cours">
+                <nb-icon icon="arrow-back-outline"></nb-icon>
+              </nb-action>
+              <nb-action (click)="updateStatut(planification, EtatListe.Termine)" 
+                         nbTooltip="Marquer comme terminé">
+                <nb-icon icon="checkmark-outline"></nb-icon>
+              </nb-action>
+              <nb-action (click)="editPlanification(planification)" 
+                         nbTooltip="Modifier">
+                <nb-icon icon="edit-outline"></nb-icon>
+              </nb-action>
+              <nb-action (click)="deletePlanification(planification)" 
+                         nbTooltip="Supprimer">
+                <nb-icon icon="trash-2-outline"></nb-icon>
+              </nb-action>
+            </nb-actions>
+          </div>
+          <p class="task-description" *ngIf="planification.description">{{ planification.description }}</p>
+          <div class="task-time">
+            <nb-icon icon="clock-outline"></nb-icon>
+            {{ planification.heureDebut }} - {{ planification.heureFin }}
+          </div>
+          <div class="task-footer">
+            <div class="task-project">
+              <span class="project-badge">{{ planification.projet?.nom || 'Projet' }}</span>
+            </div>
+            <!-- Avatar utilisateur assigné -->
+            <div class="task-assignee" *ngIf="planification.tache?.assigneId && getAssignedUser(planification.tache.assigneId) as assignedUser">
+              <div class="user-avatar" 
+                   [style.background-color]="getUserColor(assignedUser.id)"
+                   [title]="assignedUser.prenom + ' ' + assignedUser.nom">
+                {{ getUserInitials(assignedUser) }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="no-tasks" *ngIf="getPlanificationsByEtat(EtatListe.Test).length === 0">
+          Aucune tâche en test
+        </div>
+      </div>
+    </div>
+
+    <!-- Done Column -->
+    <div class="kanban-column done-column">
+      <div class="column-header">
+        <h6>Terminé</h6>
+        <div class="header-line"></div>
+      </div>
+      <div class="tasks-container">
+        <div class="task-card" *ngFor="let planification of getPlanificationsByEtat(EtatListe.Termine)">
+          <div class="task-header">
+            <h6>{{ planification.tache?.titre || 'Tâche' }}</h6>
+            <nb-actions size="tiny">
+              <nb-action (click)="updateStatut(planification, EtatListe.Test)" 
+                         nbTooltip="Retour en test">
+                <nb-icon icon="arrow-back-outline"></nb-icon>
+              </nb-action>
+              <nb-action (click)="editPlanification(planification)" 
+                         nbTooltip="Modifier">
+                <nb-icon icon="edit-outline"></nb-icon>
+              </nb-action>
+              <nb-action (click)="deletePlanification(planification)" 
+                         nbTooltip="Supprimer">
+                <nb-icon icon="trash-2-outline"></nb-icon>
+              </nb-action>
+            </nb-actions>
+          </div>
+          <p class="task-description" *ngIf="planification.description">{{ planification.description }}</p>
+          <div class="task-time">
+            <nb-icon icon="clock-outline"></nb-icon>
+            {{ planification.heureDebut }} - {{ planification.heureFin }}
+          </div>
+          <div class="task-footer">
+            <div class="task-project">
+              <span class="project-badge completed">{{ planification.projet?.nom || 'Projet' }}</span>
+            </div>
+            <!-- Avatar utilisateur assigné -->
+            <div class="task-assignee" *ngIf="planification.tache?.assigneId && getAssignedUser(planification.tache.assigneId) as assignedUser">
+              <div class="user-avatar" 
+                   [style.background-color]="getUserColor(assignedUser.id)"
+                   [title]="assignedUser.prenom + ' ' + assignedUser.nom">
+                {{ getUserInitials(assignedUser) }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="no-tasks" *ngIf="getPlanificationsByEtat(EtatListe.Termine).length === 0">
+          Aucune tâche terminée
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Indicator -->
+  <div class="loading-overlay" *ngIf="loading">
+    <nb-spinner size="large"></nb-spinner>
+  </div>
+</div> 

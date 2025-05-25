@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { AssistantService } from '../../services/assistant.service';
+import { NaturalLanguageService, ProcessingResult } from '../../services/natural-language.service';
 import { NbToastrService } from '@nebular/theme';
 import { trigger, state, style, transition, animate } from '@angular/animations';
 import { finalize } from 'rxjs/operators';
@@ -65,6 +66,7 @@ export class AssistantComponent implements OnInit, OnDestroy {
 
   constructor(
     private assistantService: AssistantService,
+    private naturalLanguageService: NaturalLanguageService,
     private toastrService: NbToastrService
   ) {
     this.initializeSpeechRecognition();
@@ -210,17 +212,84 @@ export class AssistantComponent implements OnInit, OnDestroy {
       });
     }
 
+    // Détecter le type de commande
+    if (this.isPlanificationCommand(command)) {
+      // Traitement intelligent pour les planifications
+      this.processPlanificationCommand(command, commandIndex);
+    } else {
+      // Traitement classique via le backend
+      this.processGeneralCommand(command, commandIndex);
+    }
+  }
+
+  private isPlanificationCommand(command: string): boolean {
+    const planificationKeywords = [
+      'j\'ai fait', 'j\'ai travaillé', 'j\'ai bossé', 'travail', 'projet', 'tâche', 'tache',
+      'de', 'à', 'heure', 'h', 'description', 'terminé', 'fini', 'en cours', 'progress'
+    ];
+    
+    const commandLower = command.toLowerCase();
+    return planificationKeywords.some(keyword => commandLower.includes(keyword));
+  }
+
+  private processPlanificationCommand(command: string, commandIndex: number) {
+    this.naturalLanguageService.processCommand(command)
+      .pipe(finalize(() => this.isLoading = false))
+      .subscribe({
+        next: (result: ProcessingResult) => {
+          console.log('Résultat du traitement NLP:', result);
+          
+          this.responseMessage = result.message;
+          this.responseType = result.success ? 'success' : 'error';
+          this.showResponse = true;
+          
+          const index = commandIndex !== -1 ? commandIndex : 0;
+          this.commandHistory[index].status = result.success ? 'success' : 'error';
+          this.commandHistory[index].response = result.message;
+          this.commandHistory[index].type = this.responseType;
+          
+          localStorage.setItem('commandHistory', JSON.stringify(this.commandHistory));
+          
+          if (result.success) {
+            this.toastrService.success('Planification créée avec succès!', 'Assistant IA');
+            // Vider le champ de saisie après succès
+            this.userInput = '';
+            this.transcription = '';
+          } else {
+            this.toastrService.warning(result.message, 'Assistant IA');
+          }
+        },
+        error: (error: any) => {
+          console.error('Erreur du traitement NLP:', error);
+          this.responseMessage = `Erreur lors du traitement: ${error.message || error}`;
+          this.responseType = 'error';
+          this.showResponse = true;
+          
+          const index = commandIndex !== -1 ? commandIndex : 0;
+          this.commandHistory[index].status = 'error';
+          this.commandHistory[index].response = this.responseMessage;
+          this.commandHistory[index].type = 'error';
+          
+          localStorage.setItem('commandHistory', JSON.stringify(this.commandHistory));
+          this.toastrService.danger('Erreur lors du traitement', 'Assistant IA');
+        }
+      });
+  }
+
+  private processGeneralCommand(command: string, commandIndex: number) {
     this.assistantService.sendCommand(command)
       .pipe(finalize(() => this.isLoading = false))
       .subscribe({
         next: (response: string) => {
           console.log('Réponse reçue:', response);
           this.responseMessage = response;
+          this.responseType = 'success';
           this.showResponse = true;
           
           const index = commandIndex !== -1 ? commandIndex : 0;
           this.commandHistory[index].status = 'success';
           this.commandHistory[index].response = response;
+          this.commandHistory[index].type = 'success';
           
           localStorage.setItem('commandHistory', JSON.stringify(this.commandHistory));
           this.toastrService.success('Commande exécutée avec succès', 'Succès');
@@ -228,11 +297,13 @@ export class AssistantComponent implements OnInit, OnDestroy {
         error: (error: string) => {
           console.error('Erreur détaillée:', error);
           this.responseMessage = error;
+          this.responseType = 'error';
           this.showResponse = true;
           
           const index = commandIndex !== -1 ? commandIndex : 0;
           this.commandHistory[index].status = 'error';
           this.commandHistory[index].response = error;
+          this.commandHistory[index].type = 'error';
           
           localStorage.setItem('commandHistory', JSON.stringify(this.commandHistory));
           this.toastrService.danger(error, 'Erreur');
@@ -263,4 +334,4 @@ export class AssistantComponent implements OnInit, OnDestroy {
         return 'clock-outline';
     }
   }
-}
+} 

@@ -1,0 +1,60 @@
+@import './themes';
+
+:host {
+  nb-sidebar {
+    background-color: #ffffff;
+    border-right: 1px solid #edf1f7;
+
+    .main-container {
+      background-color: #ffffff;
+      
+      .scrollable {
+        padding-top: 1rem;
+
+        .menu-item {
+          color: #222b45;
+          font-size: 0.9375rem;
+          border-radius: 0.25rem;
+          margin: 0.25rem 0.75rem;
+          
+          nb-icon {
+            color: #8f9bb3;
+          }
+
+          &:hover {
+            background-color: #f5f6fa;
+            nb-icon {
+              color: #3366ff;
+            }
+          }
+
+          &.active {
+            background-color: #edf1f7;
+            color: #3366ff;
+            
+            nb-icon {
+              color: #3366ff;
+            }
+          }
+        }
+
+        .menu-group {
+          color: #8f9bb3;
+          font-size: 0.75rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          padding: 1rem 1rem 0.5rem;
+          letter-spacing: 0.05rem;
+        }
+      }
+    }
+  }
+}
+
+// Styles spécifiques pour les icônes du menu
+nb-menu {
+  .menu-icon {
+    font-size: 1.25rem;
+    margin-right: 0.75rem;
+  }
+} 

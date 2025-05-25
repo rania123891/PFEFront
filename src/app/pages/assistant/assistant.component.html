@@ -5,7 +5,42 @@
         <div class="header">
           <nb-icon icon="headphones-outline" class="header-icon"></nb-icon>
           <h1>Assistant Vocal Intelligent</h1>
+          <p class="header-subtitle">Créez vos planifications en parlant naturellement</p>
         </div>
+
+        <!-- Instructions et exemples -->
+        <nb-card class="examples-card" *ngIf="!isListening && !userInput">
+          <nb-card-header>
+            <h5>💡 Exemples de commandes vocales</h5>
+          </nb-card-header>
+          <nb-card-body>
+            <div class="examples-grid">
+              <div class="example-item" (click)="userInput = 'J\'ai travaillé sur le projet Bouachirdd pour la tâche reporting de 8h à 9h avec la description mise à jour du tableau de bord je suis en progress'">
+                <nb-icon icon="clock-outline" class="example-icon"></nb-icon>
+                <div class="example-text">
+                  <strong>Planification simple :</strong><br>
+                  "J'ai travaillé sur le projet Bouachirdd pour la tâche reporting de 8h à 9h avec la description mise à jour du tableau de bord je suis en progress"
+                </div>
+              </div>
+              
+              <div class="example-item" (click)="userInput = 'J\'ai fait dans le projet Bouachirdd la tâche crud de 14h30 à 16h00 avec la description développement des fonctionnalités CRUD terminé'">
+                <nb-icon icon="checkmark-circle-outline" class="example-icon"></nb-icon>
+                <div class="example-text">
+                  <strong>Tâche terminée :</strong><br>
+                  "J'ai fait dans le projet Bouachirdd la tâche crud de 14h30 à 16h00 avec la description développement des fonctionnalités CRUD terminé"
+                </div>
+              </div>
+              
+              <div class="example-item" (click)="userInput = 'J\'ai bossé sur le projet Bouachirdd pour la tâche reporting de 9h à 12h pour la refonte de l\'interface utilisateur'">
+                <nb-icon icon="edit-outline" class="example-icon"></nb-icon>
+                <div class="example-text">
+                  <strong>Travail matinal :</strong><br>
+                  "J'ai bossé sur le projet Bouachirdd pour la tâche reporting de 9h à 12h pour la refonte de l'interface utilisateur"
+                </div>
+              </div>
+            </div>
+          </nb-card-body>
+        </nb-card>
 
         <!-- Zone principale -->
         <nb-card>
@@ -32,7 +67,7 @@
                     <input type="text" 
                            nbInput 
                            fullWidth
-                           placeholder="Ex: Créer un projet nommé 'Mon Projet' qui vise à 'Développer une application' avec une échéance le 30 septembre 2025"
+                           placeholder="Ex: J'ai travaillé sur le projet Bouachirdd pour la tâche reporting de 8h à 9h avec la description mise à jour du tableau de bord je suis en progress"
                            [(ngModel)]="userInput"
                            (input)="onUserInput($event)"
                            (keyup)="handleEnterKey($event)"
@@ -51,23 +86,10 @@
               </div>
 
               <!-- Message de réponse -->
-              <div class="response-message" *ngIf="showResponse">
-                <div class="message-content">
-                  <nb-icon icon="info-outline" class="response-icon"></nb-icon>
-                  {{ responseMessage }}
-                </div>
-              </div>
-
-              <!-- Suggestions -->
-              <div class="suggestions" *ngIf="!isListening && !userInput">
-                <p class="suggestions-title">Exemples de commandes :</p>
-                <div class="suggestion-chips">
-                  <div class="suggestion-chip" (click)="userInput = 'Créer un projet nommé \'Mon Projet\' qui vise à \'Développer une application\' avec une échéance le 30 septembre 2025'">
-                    "Créer un projet nommé 'Mon Projet' qui vise à 'Développer une application' avec une échéance le 30 septembre 2025"
-                  </div>
-                  <div class="suggestion-chip" (click)="userInput = 'Ajouter un projet nommé \'Site Web\' qui vise à \'Créer un site e-commerce\' avec une échéance le 15 octobre 2025'">
-                    "Ajouter un projet nommé 'Site Web' qui vise à 'Créer un site e-commerce' avec une échéance le 15 octobre 2025"
-                  </div>
+              <div class="response-message" *ngIf="showResponse" [@responseAnimation]>
+                <div class="message-content" [ngClass]="'message-' + responseType">
+                  <nb-icon [icon]="getResponseIcon()" class="response-icon"></nb-icon>
+                  <pre class="response-text">{{ responseMessage }}</pre>
                 </div>
               </div>
 
@@ -94,4 +116,4 @@
       </div>
     </div>
   </nb-layout-column>
-</nb-layout>
+</nb-layout> 

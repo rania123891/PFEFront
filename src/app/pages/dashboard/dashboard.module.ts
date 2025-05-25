@@ -9,11 +9,24 @@ import {
   NbSelectModule,
   NbListModule,
   NbIconModule,
+  NbSpinnerModule,
 } from '@nebular/theme';
 import { NgxEchartsModule } from 'ngx-echarts';
 
 import { ThemeModule } from '../../@theme/theme.module';
 import { DashboardComponent } from './dashboard.component';
+
+// Nouveaux composants
+import { OverviewCardComponent } from './overview-card/overview-card.component';
+import { TaskStatusChartComponent } from './task-status-chart/task-status-chart.component';
+import { ProjectsTrendChartComponent } from './projects-trend-chart/projects-trend-chart.component';
+import { PlanningChartComponent } from './planning-chart/planning-chart.component';
+import { RecentActivityComponent } from './recent-activity/recent-activity.component';
+import { ProjectsProgressComponent } from './projects-progress/projects-progress.component';
+import { QuickActionsComponent } from './quick-actions/quick-actions.component';
+import { TeamsOverviewComponent } from './teams-overview/teams-overview.component';
+
+// Anciens composants (gardés pour compatibilité)
 import { StatusCardComponent } from './status-card/status-card.component';
 import { ContactsComponent } from './contacts/contacts.component';
 import { RoomsComponent } from './rooms/rooms.component';
@@ -34,6 +47,11 @@ import { ProjectStatsComponent } from './project-stats/project-stats.component';
 import { ProjectTimelineComponent } from './project-timeline/project-timeline.component';
 import { ProjectStatsService } from '../../@core/data/project-stats';
 
+// Services
+import { StatistiqueService } from '../../services/statistique.service';
+import { DashboardService } from '../../services/dashboard.service';
+import { EquipeService } from '../../services/equipe.service';
+
 @NgModule({
   imports: [
     FormsModule,
@@ -48,10 +66,23 @@ import { ProjectStatsService } from '../../@core/data/project-stats';
     NbListModule,
     NbIconModule,
     NbButtonModule,
+    NbSpinnerModule,
     NgxEchartsModule,
   ],
   declarations: [
     DashboardComponent,
+    
+    // Nouveaux composants
+    OverviewCardComponent,
+    TaskStatusChartComponent,
+    ProjectsTrendChartComponent,
+    PlanningChartComponent,
+    RecentActivityComponent,
+    ProjectsProgressComponent,
+    QuickActionsComponent,
+    TeamsOverviewComponent,
+    
+    // Anciens composants (gardés pour compatibilité)
     StatusCardComponent,
     TemperatureDraggerComponent,
     ContactsComponent,
@@ -72,6 +103,9 @@ import { ProjectStatsService } from '../../@core/data/project-stats';
   ],
   providers: [
     ProjectStatsService,
+    StatistiqueService,
+    DashboardService,
+    EquipeService,
   ],
 })
 export class DashboardModule { }

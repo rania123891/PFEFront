@@ -1,0 +1,64 @@
+<div class="row">
+  <div class="col-md-12">
+    <nb-card>
+      <nb-card-header class="d-flex justify-content-between align-items-center">
+        <h5>MEMBRES DES ÉQUIPES</h5>
+        <button nbButton status="success" class="add-button" (click)="openAddForm()">
+          <nb-icon icon="plus-outline"></nb-icon>
+          AJOUTER MEMBRE
+        </button>
+      </nb-card-header>
+
+      <nb-card-body>
+        <!-- Sélecteur d'équipe -->
+        <div class="filter-container mb-4">
+          <nb-select fullWidth placeholder="Choisir une équipe" [(ngModel)]="selectedTeam" (selectedChange)="onTeamChange()">
+            <nb-option [value]="null">Toutes les équipes</nb-option>
+            <nb-option *ngFor="let team of teams" [value]="team.id">{{ team.nom }}</nb-option>
+          </nb-select>
+        </div>
+
+        <!-- Table des membres -->
+        <div class="table-container">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>MEMBRE</th>
+                <th>ÉQUIPE</th>
+                <th>RÔLE</th>
+                <th>DATE D'AJOUT</th>
+                <th>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let membre of membres">
+                <td class="member-cell">
+                  <nb-user [name]="membre.nom + ' ' + membre.prenom" [picture]="membre.photo || 'assets/images/default-avatar.png'" size="medium">
+                  </nb-user>
+                </td>
+                <td>{{ membre.equipe }}</td>
+                <td>
+                  <span class="role-badge" [ngClass]="getRoleClass(membre.role)">
+                    {{ membre.role }}
+                  </span>
+                </td>
+                <td>{{ membre.dateAjout | date:'dd/MM/yyyy' }}</td>
+                <td class="actions-cell">
+                  <button nbButton ghost status="info" class="action-button" (click)="editMembre(membre)">
+                    <nb-icon icon="edit-2-outline"></nb-icon>
+                  </button>
+                  <button nbButton ghost status="danger" class="action-button" (click)="deleteMembre(membre.id)">
+                    <nb-icon icon="trash-2-outline"></nb-icon>
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="membres.length === 0">
+                <td colspan="5" class="text-center">Aucun membre trouvé</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </nb-card-body>
+    </nb-card>
+  </div>
+</div> 
