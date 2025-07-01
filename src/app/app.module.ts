@@ -3,9 +3,9 @@
  * Copyright Akveo. All Rights Reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  */
+import { NgModule, LOCALE_ID } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import { NgModule } from '@angular/core';
 import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { CoreModule } from './@core/core.module';
 import { ThemeModule } from './@theme/theme.module';
@@ -27,7 +27,14 @@ import {
   NbCardModule,
   NbButtonModule,
 } from '@nebular/theme';
-import { AuthInterceptor } from './auth/auth.interceptor';
+import { AuthInterceptor } from './interceptors/auth.interceptor';
+
+// Import de la locale française
+import { registerLocaleData } from '@angular/common';
+import localeFr from '@angular/common/locales/fr';
+
+// Enregistrer la locale française
+registerLocaleData(localeFr);
 
 @NgModule({
   declarations: [AppComponent],
@@ -68,6 +75,10 @@ import { AuthInterceptor } from './auth/auth.interceptor';
       provide: HTTP_INTERCEPTORS,
       useClass: ErrorInterceptor,
       multi: true,
+    },
+    {
+      provide: LOCALE_ID,
+      useValue: 'fr-FR'
     }
   ],
   bootstrap: [AppComponent],

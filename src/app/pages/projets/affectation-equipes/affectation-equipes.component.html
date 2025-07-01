@@ -1,0 +1,102 @@
+<div class="affectation-equipes-container">
+  <div class="row">
+    <div class="col-md-12">
+      <nb-card>
+        <nb-card-header class="d-flex justify-content-between align-items-center">
+          <h6>Équipes Affectées</h6>
+          <button 
+            nbButton 
+            status="primary" 
+            size="small" 
+            (click)="openAffectationForm()" 
+            [disabled]="!projetId || equipesDisponibles.length === 0">
+            <nb-icon icon="plus-outline"></nb-icon>
+            Affecter une équipe
+          </button>
+        </nb-card-header>
+        
+        <nb-card-body>
+          <!-- Formulaire d'affectation -->
+          <div *ngIf="showForm" class="affectation-form mb-4">
+            <form [formGroup]="affectationForm" (ngSubmit)="onSubmit()">
+              <div class="row">
+                <div class="col-md-8">
+                  <div class="form-group">
+                    <label class="label">Sélectionner une équipe</label>
+                    <nb-select fullWidth formControlName="equipeId" placeholder="Choisir une équipe">
+                      <nb-option *ngFor="let equipe of equipesDisponibles" [value]="equipe.idEquipe">
+                        {{ equipe.nom }} ({{ getEquipeStatut(equipe.statut) }})
+                      </nb-option>
+                    </nb-select>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-actions">
+                    <button 
+                      nbButton 
+                      status="primary" 
+                      type="submit" 
+                      [disabled]="!affectationForm.valid || isSubmitting">
+                      <nb-icon icon="checkmark-outline" *ngIf="!isSubmitting"></nb-icon>
+                      <nb-icon icon="loader-outline" *ngIf="isSubmitting" class="rotating"></nb-icon>
+                      {{ isSubmitting ? 'Affectation...' : 'Affecter' }}
+                    </button>
+                    <button 
+                      nbButton 
+                      status="basic" 
+                      type="button" 
+                      (click)="cancelForm()" 
+                      class="ml-2">
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <!-- Liste des équipes affectées -->
+          <div *ngIf="isLoading" class="loading-container">
+            <nb-spinner size="medium" status="primary"></nb-spinner>
+            <p>Chargement des équipes...</p>
+          </div>
+
+          <div *ngIf="!isLoading && equipesAffectees.length === 0" class="no-data">
+            <p class="text-muted">Aucune équipe affectée à ce projet.</p>
+          </div>
+
+          <div *ngIf="!isLoading && equipesAffectees.length > 0" class="equipes-list">
+            <div 
+              *ngFor="let equipe of equipesAffectees" 
+              class="equipe-item d-flex justify-content-between align-items-center">
+              <div class="equipe-info">
+                <h6>{{ equipe.nom }}</h6>
+                <div class="equipe-details">
+                  <small class="text-muted">
+                    <span class="badge" [ngClass]="equipe.statut === 0 ? 'badge-success' : 'badge-danger'">
+                      {{ getEquipeStatut(equipe.statut) }}
+                    </span>
+                  </small>
+                </div>
+              </div>
+              <button 
+                nbButton 
+                status="danger" 
+                size="small" 
+                ghost 
+                (click)="retirerEquipe(equipe.idEquipe!)"
+                title="Retirer cette équipe du projet">
+                <nb-icon icon="trash-2-outline"></nb-icon>
+                Retirer
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="equipesDisponibles.length === 0 && !showForm" class="no-available">
+            <small class="text-muted">Toutes les équipes disponibles ont été affectées à ce projet.</small>
+          </div>
+        </nb-card-body>
+      </nb-card>
+    </div>
+  </div>
+</div> 

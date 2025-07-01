@@ -30,6 +30,14 @@ export class AuthService {
     return this.currentUserSubject.value;
   }
 
+  public getUserId(): number {
+    const user = this.currentUserValue;
+    if (!user) {
+      throw new Error('Aucun utilisateur connecté');
+    }
+    return user.id;
+  }
+
   setCurrentUser(user: UserInfo) {
     localStorage.setItem('currentUser', JSON.stringify(user));
     this.currentUserSubject.next(user);

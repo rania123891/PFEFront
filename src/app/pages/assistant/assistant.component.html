@@ -5,37 +5,58 @@
         <div class="header">
           <nb-icon icon="headphones-outline" class="header-icon"></nb-icon>
           <h1>Assistant Vocal Intelligent</h1>
-          <p class="header-subtitle">Créez vos planifications en parlant naturellement</p>
+          <p class="header-subtitle">Créez vos planifications et gérez vos projets en parlant naturellement</p>
         </div>
 
-        <!-- Instructions et exemples -->
+        <!-- Instructions et exemples améliorés -->
         <nb-card class="examples-card" *ngIf="!isListening && !userInput">
           <nb-card-header>
             <h5>💡 Exemples de commandes vocales</h5>
           </nb-card-header>
           <nb-card-body>
             <div class="examples-grid">
+              <!-- Exemples de planification -->
               <div class="example-item" (click)="userInput = 'J\'ai travaillé sur le projet Bouachirdd pour la tâche reporting de 8h à 9h avec la description mise à jour du tableau de bord je suis en progress'">
                 <nb-icon icon="clock-outline" class="example-icon"></nb-icon>
                 <div class="example-text">
-                  <strong>Planification simple :</strong><br>
-                  "J'ai travaillé sur le projet Bouachirdd pour la tâche reporting de 8h à 9h avec la description mise à jour du tableau de bord je suis en progress"
+                  <strong>Planification :</strong><br>
+                  "J'ai travaillé sur le projet Bouachirdd pour la tâche reporting de 8h à 9h"
                 </div>
               </div>
               
-              <div class="example-item" (click)="userInput = 'J\'ai fait dans le projet Bouachirdd la tâche crud de 14h30 à 16h00 avec la description développement des fonctionnalités CRUD terminé'">
-                <nb-icon icon="checkmark-circle-outline" class="example-icon"></nb-icon>
+              <!-- Exemples de projets -->
+              <div class="example-item" (click)="userInput = 'Créer un projet nommé Site Web'">
+                <nb-icon icon="briefcase-outline" class="example-icon"></nb-icon>
                 <div class="example-text">
-                  <strong>Tâche terminée :</strong><br>
-                  "J'ai fait dans le projet Bouachirdd la tâche crud de 14h30 à 16h00 avec la description développement des fonctionnalités CRUD terminé"
+                  <strong>Nouveau projet :</strong><br>
+                  "Créer un projet nommé Site Web"
                 </div>
               </div>
               
-              <div class="example-item" (click)="userInput = 'J\'ai bossé sur le projet Bouachirdd pour la tâche reporting de 9h à 12h pour la refonte de l\'interface utilisateur'">
-                <nb-icon icon="edit-outline" class="example-icon"></nb-icon>
+              <!-- Exemples de tâches -->
+              <div class="example-item" (click)="userInput = 'Nouvelle tâche qui s\'appelle Test avec priorité moyenne'">
+                <nb-icon icon="checkmark-square-outline" class="example-icon"></nb-icon>
                 <div class="example-text">
-                  <strong>Travail matinal :</strong><br>
-                  "J'ai bossé sur le projet Bouachirdd pour la tâche reporting de 9h à 12h pour la refonte de l'interface utilisateur"
+                  <strong>Nouvelle tâche :</strong><br>
+                  "Nouvelle tâche qui s'appelle Test avec priorité moyenne"
+                </div>
+              </div>
+
+              <!-- Exemples d'équipes -->
+              <div class="example-item" (click)="userInput = 'Créer une équipe nommée Dev Team'">
+                <nb-icon icon="people-outline" class="example-icon"></nb-icon>
+                <div class="example-text">
+                  <strong>Nouvelle équipe :</strong><br>
+                  "Créer une équipe nommée Dev Team"
+                </div>
+              </div>
+
+              <!-- Exemples de membres -->
+              <div class="example-item" (click)="userInput = 'Ajouter le membre Jean Dupont dans l\'équipe Dev Team'">
+                <nb-icon icon="person-add-outline" class="example-icon"></nb-icon>
+                <div class="example-text">
+                  <strong>Nouveau membre :</strong><br>
+                  "Ajouter le membre Jean Dupont dans l'équipe Dev Team"
                 </div>
               </div>
             </div>
@@ -67,7 +88,7 @@
                     <input type="text" 
                            nbInput 
                            fullWidth
-                           placeholder="Ex: J'ai travaillé sur le projet Bouachirdd pour la tâche reporting de 8h à 9h avec la description mise à jour du tableau de bord je suis en progress"
+                           placeholder="Ex: Nouvelle tâche qui s'appelle Test avec priorité moyenne"
                            [(ngModel)]="userInput"
                            (input)="onUserInput($event)"
                            (keyup)="handleEnterKey($event)"
@@ -85,11 +106,38 @@
                 </div>
               </div>
 
-              <!-- Message de réponse -->
+              <!-- Message de réponse amélioré -->
               <div class="response-message" *ngIf="showResponse" [@responseAnimation]>
                 <div class="message-content" [ngClass]="'message-' + responseType">
-                  <nb-icon [icon]="getResponseIcon()" class="response-icon"></nb-icon>
+                  <div class="response-header">
+                    <nb-icon [icon]="getResponseIcon()" class="response-icon"></nb-icon>
+                    <div class="response-meta">
+                      <div class="command-type" *ngIf="currentCommandType">
+                        <nb-icon [icon]="getCommandTypeIcon(currentCommandType)"></nb-icon>
+                        <span>{{ currentCommandType }}</span>
+                      </div>
+                      <div class="confidence-badge" *ngIf="currentConfidence > 0" [ngClass]="'badge-' + getConfidenceColor()">
+                        <nb-icon icon="trending-up-outline"></nb-icon>
+                        <span>{{ Math.round(currentConfidence) }}%</span>
+                      </div>
+                    </div>
+                  </div>
+                  
                   <pre class="response-text">{{ responseMessage }}</pre>
+                  
+                  <!-- Données extraites -->
+                  <div class="extracted-data" *ngIf="showDetails && getExtractedDataEntries().length > 0">
+                    <div class="details-header" (click)="toggleDetails()">
+                      <nb-icon icon="chevron-down-outline" [class.rotated]="showDetails"></nb-icon>
+                      <span>Données extraites</span>
+                    </div>
+                    <div class="details-content">
+                      <div class="data-item" *ngFor="let item of getExtractedDataEntries()">
+                        <span class="data-key">{{ item.key }}:</span>
+                        <span class="data-value">{{ item.value }}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -109,6 +157,51 @@
                         [disabled]="isLoading">
                   <nb-icon icon="trash-2-outline"></nb-icon>
                 </button>
+
+                <!-- Bouton historique -->
+                <button class="control-button history-button" 
+                        (click)="toggleHistory()"
+                        [class.active]="showHistory"
+                        [disabled]="isLoading">
+                  <nb-icon icon="clock-outline"></nb-icon>
+                </button>
+              </div>
+            </div>
+          </nb-card-body>
+        </nb-card>
+
+        <!-- Historique des commandes amélioré -->
+        <nb-card *ngIf="showHistory && commandHistory.length > 0" class="history-card">
+          <nb-card-header class="history-header">
+            <h6>Historique des commandes</h6>
+            <button nbButton status="danger" size="small" (click)="clearHistory()">
+              <nb-icon icon="trash-2-outline"></nb-icon>
+              Effacer
+            </button>
+          </nb-card-header>
+          <nb-card-body>
+            <div class="history-items">
+              <div class="history-item" 
+                   *ngFor="let cmd of commandHistory; trackBy: trackByCommand" 
+                   [@historyItemAnimation]
+                   (click)="useHistoryCommand(cmd)">
+                <div class="history-header">
+                  <nb-icon [icon]="getStatusIcon(cmd.status)" [ngClass]="'icon-' + cmd.status"></nb-icon>
+                  <span class="command-text">{{ cmd.text }}</span>
+                  <div class="history-meta">
+                    <span class="command-type-badge" *ngIf="cmd.commandType">
+                      <nb-icon [icon]="getCommandTypeIcon(cmd.commandType)"></nb-icon>
+                      {{ cmd.commandType }}
+                    </span>
+                    <span class="confidence-mini" *ngIf="cmd.confidence && cmd.confidence > 0">
+                      {{ Math.round(cmd.confidence) }}%
+                    </span>
+                    <span class="timestamp">{{ cmd.timestamp | date:'HH:mm' }}</span>
+                  </div>
+                </div>
+                <div class="response-preview" *ngIf="cmd.response">
+                  {{ cmd.response }}
+                </div>
               </div>
             </div>
           </nb-card-body>

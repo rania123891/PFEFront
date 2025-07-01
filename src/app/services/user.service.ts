@@ -29,9 +29,35 @@ export class UserService {
         ...user,
         nom: user.nom || '---',
         prenom: user.prenom || '---',
-        dateCreation: user.dateCreation || '---',
-        role: this.formatRole(user.role)
+        role: this.formatRole(user.role),
+        profilePicture: (user as any).profilePhotoUrl || (user as any).profilePicture || null
       })))
+    );
+  }
+
+  // Endpoint spécial pour la messagerie - accessible à tous les utilisateurs connectés
+  getUsersForMessaging(): Observable<User[]> {
+    return this.http.get<User[]>(`${this.apiUrl}/for-messaging`).pipe(
+      map(users => users.map(user => ({
+        ...user,
+        nom: user.nom || '---',
+        prenom: user.prenom || '---',
+        role: this.formatRole(user.role),
+        profilePicture: (user as any).profilePhotoUrl || (user as any).profilePicture || null
+      })))
+    );
+  }
+
+  getUserWithProfile(id: number): Observable<User> {
+    return this.http.get<User>(`${this.apiUrl}/${id}`).pipe(
+      map(user => ({
+        ...user,
+        nom: user.nom || '---',
+        prenom: user.prenom || '---',
+        dateCreation: user.dateCreation || '---',
+        role: this.formatRole(user.role),
+        profilePicture: (user as any).profilePhotoUrl || (user as any).profilePicture || null
+      }))
     );
   }
 

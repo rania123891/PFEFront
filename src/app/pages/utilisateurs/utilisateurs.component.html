@@ -27,16 +27,34 @@
           <table class="table">
             <thead>
               <tr>
+                <th>AVATAR</th>
                 <th>NOM</th>
                 <th>PRÉNOM</th>
                 <th>EMAIL</th>
                 <th>RÔLE</th>
-                <th>DATE DE CRÉATION</th>
                 <th>ACTIONS</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let utilisateur of utilisateurs">
+                <td class="avatar-cell">
+                  <div class="user-avatar">
+                    <img 
+                      *ngIf="utilisateur.profilePicture" 
+                      [src]="utilisateur.profilePicture" 
+                      [alt]="utilisateur.nom + ' ' + utilisateur.prenom"
+                      class="avatar-image"
+                      (error)="onImageError($event, utilisateur)"
+                    >
+                    <div 
+                      *ngIf="!utilisateur.profilePicture || utilisateur.showInitials" 
+                      class="avatar-initials"
+                      [style.background-color]="getUserColor(utilisateur.id)"
+                    >
+                      {{ getUserInitials(utilisateur) }}
+                    </div>
+                  </div>
+                </td>
                 <td>{{ utilisateur.nom || '---' }}</td>
                 <td>{{ utilisateur.prenom || '---' }}</td>
                 <td>{{ utilisateur.email }}</td>
@@ -45,7 +63,6 @@
                     {{ utilisateur.role || '---' }}
                   </span>
                 </td>
-                <td>{{ utilisateur.dateCreation ? (utilisateur.dateCreation | date:'dd/MM/yyyy') : '---' }}</td>
                 <td class="actions-cell">
                   <button nbButton ghost status="info" class="action-button" (click)="openEditForm(utilisateur)">
                     <nb-icon icon="edit-2-outline"></nb-icon>
@@ -103,6 +120,64 @@
                 <span class="error" *ngIf="utilisateurForm.get('role').touched && utilisateurForm.get('role').invalid">
                   Le rôle est requis
                 </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section Photo de profil -->
+          <div class="row">
+            <div class="col-md-12">
+              <div class="form-group">
+                <label class="label">Photo de profil</label>
+                <div class="profile-picture-section">
+                  <div class="current-avatar">
+                    <div class="user-avatar large">
+                      <img 
+                        *ngIf="previewImage || (editedUtilisateur?.profilePicture && !previewImage)" 
+                        [src]="previewImage || editedUtilisateur?.profilePicture" 
+                        class="avatar-image"
+                        (error)="onPreviewImageError($event)"
+                      >
+                      <div 
+                        *ngIf="(!previewImage && !editedUtilisateur?.profilePicture) || showPreviewInitials" 
+                        class="avatar-initials"
+                        [style.background-color]="getPreviewColor()"
+                      >
+                        {{ getPreviewInitials() }}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="upload-controls">
+                    <input 
+                      type="file" 
+                      #fileInput 
+                      accept="image/*" 
+                      (change)="onFileSelected($event)"
+                      style="display: none"
+                    >
+                    <button 
+                      nbButton 
+                      status="basic" 
+                      size="small" 
+                      type="button"
+                      (click)="fileInput.click()"
+                    >
+                      <nb-icon icon="camera-outline"></nb-icon>
+                      Choisir une photo
+                    </button>
+                    <button 
+                      *ngIf="previewImage || editedUtilisateur?.profilePicture"
+                      nbButton 
+                      status="danger" 
+                      size="small" 
+                      type="button"
+                      (click)="removeProfilePicture()"
+                    >
+                      <nb-icon icon="trash-2-outline"></nb-icon>
+                      Supprimer
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

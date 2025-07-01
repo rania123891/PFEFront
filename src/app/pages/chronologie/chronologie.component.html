@@ -1,0 +1,229 @@
+<div class="chronologie-container">
+  <nb-card>
+    <!-- En-tête avec contrôles de navigation -->
+    <nb-card-header>
+      <div class="calendar-header">
+        <div class="title-section">
+          <h4>
+            <nb-icon icon="calendar-outline"></nb-icon>
+            Chronologie - Calendrier Tunisien
+          </h4>
+        </div>
+        
+        <div class="calendar-navigation">
+          <button nbButton ghost status="primary" (click)="changerMois('previous')">
+            <nb-icon icon="chevron-left-outline"></nb-icon>
+          </button>
+          
+          <div class="month-year-display">
+            <h5>{{ getNomMois(date) }}</h5>
+          </div>
+          
+          <button nbButton ghost status="primary" (click)="changerMois('next')">
+            <nb-icon icon="chevron-right-outline"></nb-icon>
+          </button>
+          
+          <button nbButton status="info" (click)="allerAujourdhui()">
+            Aujourd'hui
+          </button>
+        </div>
+      </div>
+    </nb-card-header>
+
+    <nb-card-body>
+      <!-- Indicateur de chargement -->
+      <div *ngIf="loading" class="loading-container">
+        <nb-spinner size="large" status="primary">
+          Chargement des planifications...
+        </nb-spinner>
+      </div>
+
+      <!-- Calendrier grille -->
+      <div class="calendar-grid">
+        
+        <!-- En-tête des jours de la semaine -->
+        <div class="calendar-weekdays">
+          <div class="weekday-header" *ngFor="let jour of joursDeSemine">
+            {{ jour }}
+          </div>
+        </div>
+
+        <!-- Grille des jours du mois -->
+        <div class="calendar-days">
+          <div 
+            *ngFor="let jour of joursDeCalendrier; trackBy: trackByJour" 
+            class="calendar-day"
+            [class.other-month]="!jour.estDuMoisCourant"
+            [class.today]="estAujourdhui(jour.date)"
+            [class.selected]="estSelectionne(jour.date)"
+            [class.weekend]="estWeekend(jour.date)"
+            [ngClass]="getClasseJourFerie(jour.date)"
+            (click)="onDateSelect(jour.date)">
+            
+            <!-- Numéro du jour -->
+            <div class="day-number">
+              {{ jour.date.getDate() }}
+              
+              <!-- Indicateur jour férié -->
+              <span *ngIf="estJourFerie(jour.date) as ferie" class="holiday-indicator">
+                {{ getEmojiParType(ferie.type) }}
+              </span>
+            </div>
+
+            <!-- Événements du jour -->
+            <div class="day-events">
+              <div 
+                *ngFor="let event of getEvenementsJour(jour.date)" 
+                class="event-item planification-event"
+                [style.background-color]="event.couleur"
+                [title]="event.description + '\n' + (event.heureDebut ? event.heureDebut + ' - ' + event.heureFin : '')">
+                
+                                 <!-- Avatar utilisateur -->
+                 <div *ngIf="event.utilisateur" class="user-avatar-mini">
+                   <img 
+                     *ngIf="event.utilisateur.profilePicture && !event.utilisateur.showInitials" 
+                     [src]="event.utilisateur.profilePicture"
+                     [alt]="event.utilisateur.prenom + ' ' + event.utilisateur.nom"
+                     class="avatar-image-mini"
+                     (error)="onAvatarError($event, event.utilisateur)"
+                   >
+                   <div 
+                     *ngIf="!event.utilisateur.profilePicture || event.utilisateur.showInitials" 
+                     class="avatar-initials-mini"
+                     [style.background-color]="event.utilisateur.couleurAvatar"
+                     [title]="event.utilisateur.prenom + ' ' + event.utilisateur.nom">
+                     {{ event.utilisateur.initiales }}
+                   </div>
+                 </div>
+                
+                <!-- Badge de priorité -->
+                <span *ngIf="event.priorite !== undefined" class="priority-badge" 
+                      [ngClass]="'priority-' + event.priorite">
+                  {{ getPrioriteSymbol(event.priorite) }}
+                </span>
+                
+                <!-- Titre de la tâche -->
+                <span class="event-title">{{ event.titre }}</span>
+                
+                <!-- Horaire -->
+                <span *ngIf="event.heureDebut" class="event-time">
+                  {{ event.heureDebut }}
+                </span>
+              </div>
+              
+              <!-- Affichage du nom du jour férié -->
+              <div 
+                *ngIf="estJourFerie(jour.date) as ferie" 
+                class="holiday-name"
+                [title]="ferie.description">
+                {{ ferie.nom }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Légende et informations -->
+      <div class="calendar-footer">
+        <div class="calendar-legend">
+          <h6>Légende :</h6>
+          <div class="legend-items">
+            <div class="legend-item">
+              <span class="legend-color national"></span>
+              <span>🇹🇳 Fêtes nationales</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-color religieux"></span>
+              <span>☪️ Fêtes religieuses</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-color civil"></span>
+              <span>🎉 Jours fériés civils</span>
+            </div>
+                         <div class="legend-item">
+               <span class="legend-color todo"></span>
+               <span>📝 À faire (Todo)</span>
+             </div>
+             <div class="legend-item">
+               <span class="legend-color en-cours"></span>
+               <span>🔄 En cours</span>
+             </div>
+             <div class="legend-item">
+               <span class="legend-color test"></span>
+               <span>🧪 Test</span>
+             </div>
+             <div class="legend-item">
+               <span class="legend-color termine"></span>
+               <span>✅ Terminé</span>
+             </div>
+          </div>
+        </div>
+
+        <!-- Informations sur le jour sélectionné -->
+        <div class="selected-day-info" *ngIf="selectedDate">
+          <h6>{{ formaterDateFrancaise(selectedDate) }}</h6>
+          
+          <!-- Détails jour férié -->
+          <div *ngIf="estJourFerie(selectedDate) as ferie" class="holiday-details">
+            <nb-alert [status]="getStatusParType(ferie.type)" size="small">
+              <strong>{{ getEmojiParType(ferie.type) }} {{ ferie.nom }}</strong>
+              <br>
+              <small>{{ ferie.description }}</small>
+            </nb-alert>
+          </div>
+
+                     <!-- Planifications détaillées -->
+           <div *ngIf="getEvenementsJour(selectedDate).length > 0" class="events-details">
+             <h6>Planifications du jour :</h6>
+             <div *ngFor="let event of getEvenementsJour(selectedDate)" class="event-detail">
+               <div class="event-header">
+                 <div class="event-title-section">
+                                        <!-- Avatar utilisateur plus grand -->
+                     <div *ngIf="event.utilisateur" class="user-avatar-large">
+                       <img 
+                         *ngIf="event.utilisateur.profilePicture && !event.utilisateur.showInitials" 
+                         [src]="event.utilisateur.profilePicture"
+                         [alt]="event.utilisateur.prenom + ' ' + event.utilisateur.nom"
+                         class="avatar-image-large"
+                         (error)="onAvatarError($event, event.utilisateur)"
+                       >
+                       <div 
+                         *ngIf="!event.utilisateur.profilePicture || event.utilisateur.showInitials" 
+                         class="avatar-initials-large"
+                         [style.background-color]="event.utilisateur.couleurAvatar">
+                         {{ event.utilisateur.initiales }}
+                       </div>
+                     </div>
+                   
+                   <strong [style.color]="event.couleur">
+                     {{ getPrioriteSymbol(event.priorite) }} {{ event.titre }}
+                   </strong>
+                 </div>
+                 
+                 <span *ngIf="event.heureDebut" class="event-time-badge">
+                   {{ event.heureDebut }} - {{ event.heureFin }}
+                 </span>
+               </div>
+               
+                                <div class="event-meta">
+                   <span class="event-status" [style.background-color]="event.couleur">
+                     {{ getEtatLabel(event.etatListe) }}
+                   </span>
+                   <span class="event-priority">
+                     Priorité: {{ getPrioriteLabel(event.priorite) }}
+                   </span>
+                   <span *ngIf="event.utilisateur" class="event-assignee">
+                     👤 {{ event.utilisateur.prenom }} {{ event.utilisateur.nom }}
+                   </span>
+                 </div>
+               
+               <p *ngIf="event.description" class="event-description">
+                 {{ event.description }}
+               </p>
+             </div>
+           </div>
+        </div>
+      </div>
+    </nb-card-body>
+  </nb-card>
+</div> 

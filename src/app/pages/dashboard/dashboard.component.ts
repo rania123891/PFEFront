@@ -63,6 +63,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .pipe(takeWhile(() => this.alive))
       .subscribe(data => {
         this.statistiques = data;
+        console.log('📊 Dashboard - Statistiques reçues:', data);
       });
 
     // S'abonner à l'état de chargement
@@ -70,6 +71,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .pipe(takeWhile(() => this.alive))
       .subscribe(isLoading => {
         this.loading = isLoading;
+        console.log('⏳ Dashboard - État chargement:', isLoading);
       });
 
     // S'abonner aux erreurs
@@ -77,6 +79,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .pipe(takeWhile(() => this.alive))
       .subscribe(error => {
         this.error = error;
+        console.log('❌ Dashboard - Erreur:', error);
       });
 
     // S'abonner à la date de dernière mise à jour
@@ -84,11 +87,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .pipe(takeWhile(() => this.alive))
       .subscribe(lastUpdate => {
         this.lastUpdate = lastUpdate;
+        console.log('🕒 Dashboard - Dernière mise à jour:', lastUpdate);
       });
   }
 
-  // Méthode pour actualiser manuellement les données
-  refreshData() {
+  // Méthode pour forcer l'actualisation
+  refreshStats(): void {
+    console.log('🔄 Actualisation manuelle des statistiques...');
     this.dashboardService.refreshData();
   }
 

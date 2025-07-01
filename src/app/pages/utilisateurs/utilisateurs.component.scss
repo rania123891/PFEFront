@@ -126,6 +126,16 @@ nb-card-body {
       }
     }
   }
+
+  th:first-child {
+    width: 60px;
+    text-align: center;
+  }
+  
+  td.avatar-cell {
+    text-align: center;
+    vertical-align: middle;
+  }
 }
 
 .status-cell {
@@ -229,5 +239,106 @@ nb-card-body {
         border-color: #e4e9f2;
       }
     }
+  }
+}
+
+// ✅ Styles pour les avatars
+.avatar-cell {
+  width: 60px;
+  padding: 0.75rem 1rem !important;
+}
+
+.user-avatar {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  
+  &.large {
+    width: 80px;
+    height: 80px;
+  }
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.avatar-initials {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  
+  .large & {
+    font-size: 1.5rem;
+  }
+}
+
+// ✅ Styles pour la section photo de profil
+.profile-picture-section {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 0.75rem;
+  border: 2px dashed #e4e9f2;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    border-color: #3366ff;
+    background-color: #f0f3ff;
+  }
+}
+
+.current-avatar {
+  flex-shrink: 0;
+}
+
+.upload-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  
+  button {
+    align-self: flex-start;
+    min-width: 140px;
+    
+    nb-icon {
+      margin-right: 0.5rem;
+    }
+  }
+}
+
+// ✅ Responsive pour les avatars
+@media (max-width: 768px) {
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .avatar-initials {
+    font-size: 0.75rem;
+  }
+  
+  .avatar-cell {
+    width: 50px;
+    padding: 0.5rem !important;
   }
 } 

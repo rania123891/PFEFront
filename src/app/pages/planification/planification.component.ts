@@ -2,10 +2,24 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TacheService, Tache, PrioriteTache, StatutTache } from '../../services/tache.service';
 import { ProjetService, Projet } from '../../services/projet.service';
-import { PlanificationService, Planification, EtatListe, CreatePlanificationDto } from '../../services/planification.service';
+import { PlanificationService, Planification, EtatListe, CreatePlanificationDto, UserPermissions, UserForSelection } from '../../services/planification.service';
 import { UtilisateurService, Utilisateur } from '../../services/utilisateur.service';
+import { EquipeService, Equipe } from '../../services/equipe.service';
+import { MembreEquipeService } from '../../services/membre-equipe.service';
+import { AuthService } from '../../auth/auth.service';
+import { ProfileService } from '../../services/profile.service';
+
 import { NbToastrService } from '@nebular/theme';
-import { forkJoin } from 'rxjs';
+import { forkJoin, Observable } from 'rxjs';
+import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+
+interface UserInfo {
+  id: number;
+  email: string;
+  nom: string;
+  prenom: string;
+  picture?: string;
+}
 
 @Component({
   selector: 'ngx-planification',
@@ -35,22 +49,109 @@ export class PlanificationComponent implements OnInit {
   isEditMode = false;
   editingPlanification: Planification | null = null;
 
+  // Propriétés pour l'utilisateur connecté
+  currentUser: UserInfo | null = null;
+  currentUserEquipe: Equipe | null = null;
+  
+  // 👑 Propriétés pour l'interface admin
+  isAdmin: boolean = false;
+  selectedUserId: number | null = null;
+  availableUsers: Utilisateur[] = [];
+  userTeams: Map<number, string> = new Map(); // Cache des équipes par utilisateur
+  filteredUsers: Utilisateur[] = [];
+  userSearchQuery: string = '';
+  adminStats: any = null;
+
+
+
   constructor(
     private formBuilder: FormBuilder,
     public tacheService: TacheService,
     private projetService: ProjetService,
     private planificationService: PlanificationService,
     private utilisateurService: UtilisateurService,
+    private equipeService: EquipeService,
+    private membreEquipeService: MembreEquipeService,
+    private authService: AuthService,
     private toastrService: NbToastrService,
+    private profileService: ProfileService
   ) {
     this.initForm();
     this.initFilterForm();
   }
 
   ngOnInit() {
-    this.loadProjets();
-    this.loadUtilisateurs();
-    this.loadPlanificationsByDate();
+    console.log('🔍 DEBUT DIAGNOSTIC UTILISATEUR');
+    
+    // Récupérer l'utilisateur depuis le token JWT du bon AuthService
+    const token = this.authService.getToken();
+    console.log('📱 Token depuis AuthService:', token ? 'Présent' : 'Absent');
+    
+    if (token) {
+      try {
+        // Décoder le token pour récupérer les informations utilisateur
+        const tokenData = JSON.parse(atob(token.split('.')[1]));
+        console.log('🔍 Données du token:', tokenData);
+        
+        const userId = tokenData.nameid;
+        console.log('🔑 User ID depuis token:', userId);
+
+        // Vérifier si l'utilisateur est admin depuis le token
+        this.isAdmin = tokenData.role === 'Admin' || tokenData.role?.includes('Admin');
+        console.log('👑 Est administrateur (depuis token):', this.isAdmin);
+        
+        if (userId) {
+          // Récupérer le profil complet depuis l'API
+          this.profileService.getUserProfile(parseInt(userId)).subscribe({
+            next: (user) => {
+              console.log('✅ Utilisateur récupéré via ProfileService:', user);
+              if (user) {
+                this.currentUser = {
+                  id: user.id,
+                  email: user.email,
+                  nom: user.nom,
+                  prenom: user.prenom,
+                  picture: user.profilePhotoUrl
+                };
+                console.log('👤 Utilisateur connecté confirmé:', this.currentUser);
+                // Charger les données nécessaires
+                this.loadProjets();
+                this.loadUtilisateurs();
+                
+                // 👑 Si admin, charger tous les utilisateurs pour la sélection
+                if (this.isAdmin) {
+                  this.loadAllUsersForAdmin();
+                }
+                
+                this.loadPlanificationsByDate();
+                this.loadUserEquipe();
+              } else {
+                console.log('⚠️ Profil utilisateur null, utilisation des données du token');
+                this.fallbackToTokenData(tokenData, userId);
+              }
+            },
+            error: (error) => {
+              console.error('❌ Erreur lors de la récupération via ProfileService:', error);
+                              // Fallback avec les données du token
+                this.fallbackToTokenData(tokenData, userId);
+                
+                // 👑 Si admin, charger tous les utilisateurs pour la sélection
+                if (this.isAdmin) {
+                  this.loadAllUsersForAdmin();
+                }
+            }
+          });
+          return;
+        }
+      } catch (error) {
+        console.error('❌ Erreur lors du décodage du token:', error);
+      }
+    }
+    
+    // Aucun token ou token invalide
+    console.log('❌ Aucun utilisateur trouvé. Redirection nécessaire vers la page de connexion.');
+    this.toastrService.danger('Session expirée. Veuillez vous reconnecter.', 'Erreur');
+    return;
   }
 
   private initFilterForm() {
@@ -72,6 +173,8 @@ export class PlanificationComponent implements OnInit {
       heureFin: ['09:00', Validators.required]
     });
 
+    // Suppression du listener pour garder le filtrage par équipe
+    /*
     this.planificationForm.get('projetId')?.valueChanges.subscribe(projetId => {
       if (projetId) {
         this.loadTachesProjet(projetId);
@@ -79,6 +182,7 @@ export class PlanificationComponent implements OnInit {
         this.taches = [];
       }
     });
+    */
   }
 
   onProjetChange(projetId: number) {
@@ -87,12 +191,13 @@ export class PlanificationComponent implements OnInit {
       this.selectedProjet = projetId;
       this.planificationForm.patchValue({ projetId: projetId });
       console.log('📝 selectedProjet mis à jour:', this.selectedProjet);
-      this.loadAllTaches();
+      // Ne plus recharger les tâches ici car on veut garder le filtrage par équipe
+      console.log('ℹ️ Les tâches restent filtrées par équipe');
     } else {
-      console.log('⚠️ Aucun projet sélectionné, vidage des tâches');
+      console.log('⚠️ Aucun projet sélectionné');
       this.selectedProjet = null;
       this.planificationForm.patchValue({ projetId: null });
-      this.taches = [];
+      // On garde les tâches de l'équipe même sans projet sélectionné
     }
   }
 
@@ -126,26 +231,26 @@ export class PlanificationComponent implements OnInit {
   getStatusClass(statut: StatutTache): string {
     switch (statut) {
       case StatutTache.EnCours:
-        return 'badge-progress';
+        return 'status-en-cours';
       case StatutTache.Terminee:
-        return 'badge-done';
+        return 'status-terminee';
       case StatutTache.Annulee:
-        return 'badge-todo';
+        return 'status-annulee';
       default:
-        return 'badge-todo';
+        return '';
     }
   }
 
   getPriorityClass(priorite: PrioriteTache): string {
     switch (priorite) {
       case PrioriteTache.Faible:
-        return 'priority-low';
+        return 'priority-faible';
       case PrioriteTache.Moyenne:
-        return 'priority-medium';
+        return 'priority-moyenne';
       case PrioriteTache.Elevee:
-        return 'priority-high';
+        return 'priority-elevee';
       default:
-        return 'priority-basic';
+        return '';
     }
   }
 
@@ -182,7 +287,6 @@ export class PlanificationComponent implements OnInit {
   }
 
   cancelEdit() {
-    console.log('❌ Annulation de l\'édition');
     this.isEditMode = false;
     this.editingPlanification = null;
     this.resetForm();
@@ -190,69 +294,68 @@ export class PlanificationComponent implements OnInit {
   }
 
   deletePlanification(planification: Planification) {
-    if (planification.id && confirm('Êtes-vous sûr de vouloir supprimer cette planification ?')) {
-      console.log('🗑️ Suppression de la planification:', planification.id);
-      
-      this.planificationService.deletePlanification(planification.id).subscribe({
+    if (confirm(`Êtes-vous sûr de vouloir supprimer cette planification ?`)) {
+      this.planificationService.deletePlanification(planification.id!).subscribe({
         next: () => {
-          console.log('✅ Planification supprimée');
-          this.toastrService.success('Planification supprimée', 'Succès');
-          this.loadPlanificationsByDate();
+          console.log('✅ Planification supprimée:', planification.id);
+          this.toastrService.success('Planification supprimée avec succès', 'Succès');
+          
+          // Retirer de la liste locale
+          this.planifications = this.planifications.filter(p => p.id !== planification.id);
         },
         error: (error) => {
           console.error('❌ Erreur lors de la suppression:', error);
-          console.log('🛠️ API non disponible, suppression locale...');
           
-          // Suppression locale
-          const index = this.planifications.findIndex(p => p.id === planification.id);
-          if (index !== -1) {
-            this.planifications.splice(index, 1);
-            this.toastrService.success('Planification supprimée localement', 'Succès');
-          }
+          // Fallback: suppression locale
+          console.log('🛠️ API non disponible, suppression locale...');
+          this.planifications = this.planifications.filter(p => p.id !== planification.id);
+          this.toastrService.success('Planification supprimée localement', 'Succès');
         }
       });
     }
   }
 
   updateStatut(planification: Planification, nouvelEtat: EtatListe) {
-    if (planification.id) {
-      console.log('🔄 Mise à jour du statut via API:', planification.id, 'vers', nouvelEtat);
-      
-      this.planificationService.updateStatut(planification.id, nouvelEtat).subscribe({
-        next: (planificationMiseAJour) => {
-          console.log('✅ Statut mis à jour dans la BD:', planificationMiseAJour);
-          
-          // Mise à jour locale après confirmation de l'API
-          const index = this.planifications.findIndex(p => p.id === planification.id);
-          if (index !== -1) {
-            this.planifications[index].listeId = nouvelEtat;
-          }
-          
-          this.toastrService.success(
-            `Tâche déplacée vers ${this.getEtatLabel(nouvelEtat)} et sauvegardée`,
-            'Succès'
-          );
-        },
-        error: (error) => {
-          console.error('❌ Erreur lors de la mise à jour du statut:', error);
-          console.log('🛠️ API non disponible, mise à jour locale seulement...');
-          
-          // Fallback: mise à jour locale si l'API n'est pas disponible
-          const index = this.planifications.findIndex(p => p.id === planification.id);
-          if (index !== -1) {
-            this.planifications[index].listeId = nouvelEtat;
-            this.toastrService.warning(
-              `Tâche déplacée localement vers ${this.getEtatLabel(nouvelEtat)} (API non disponible)`,
-              'Attention'
-            );
-          } else {
-            this.toastrService.danger('Erreur lors de la mise à jour du statut', 'Erreur');
-          }
-        }
-      });
-    } else {
-      this.toastrService.warning('Impossible de mettre à jour : ID manquant', 'Attention');
+    const ancienEtat = planification.listeId;
+    console.log(`🔄 Mise à jour du statut de la planification ${planification.id} : ${ancienEtat} → ${nouvelEtat}`);
+    
+    // Mise à jour optimiste (locale)
+    planification.listeId = nouvelEtat;
+    
+    // 🔍 Vérifier si c'est une tâche reportée (sans ID)
+    if (!planification.id) {
+      console.log('📝 Tâche reportée détectée - création d\'une nouvelle planification');
+      this.creerPlanificationPourTacheReportee(planification, nouvelEtat);
+      return;
     }
+    
+    this.planificationService.updatePlanificationStatus(planification.id, nouvelEtat).subscribe({
+      next: (updatedPlanification) => {
+        console.log('✅ Statut mis à jour avec succès:', updatedPlanification);
+        
+        // Mettre à jour l'objet local avec la réponse du serveur
+        const index = this.planifications.findIndex(p => p.id === planification.id);
+        if (index !== -1) {
+          this.planifications[index] = { ...this.planifications[index], ...updatedPlanification };
+        }
+        
+        this.toastrService.success(
+          `Statut changé vers "${this.getEtatLabel(nouvelEtat)}"`, 
+          'Succès'
+        );
+      },
+      error: (error) => {
+        console.error('❌ Erreur lors de la mise à jour du statut:', error);
+        
+        // Revenir en arrière en cas d'erreur
+        planification.listeId = ancienEtat;
+        
+        this.toastrService.danger(
+          'Erreur lors de la mise à jour du statut', 
+          'Erreur'
+        );
+      }
+    });
   }
 
   private getEtatLabel(etat: EtatListe): string {
@@ -271,180 +374,224 @@ export class PlanificationComponent implements OnInit {
   }
 
   loadProjets() {
-    this.loading = true;
     this.projetService.getProjets().subscribe({
       next: (projets) => {
         this.projets = projets;
-        this.loading = false;
+        console.log('✅ Projets chargés:', projets.length);
       },
       error: (error) => {
-        console.error('Erreur lors du chargement des projets:', error);
-        this.toastrService.danger(
-          'Impossible de charger les projets',
-          'Erreur'
-        );
-        this.loading = false;
+        console.error('❌ Erreur lors du chargement des projets:', error);
       }
     });
   }
 
   loadAllTaches() {
-    this.loading = true;
-    console.log('🔍 Chargement de toutes les tâches disponibles...');
+    console.log('🔍 DEBUT loadAllTaches()');
+    console.log('🔍 currentUserEquipe:', this.currentUserEquipe);
     
+    // Charger les tâches de l'équipe de l'utilisateur connecté
+    if (this.currentUserEquipe && this.currentUserEquipe.idEquipe && this.currentUserEquipe.idEquipe !== undefined) {
+      console.log('📋 Chargement des tâches pour l\'équipe:', this.currentUserEquipe.nom);
+      console.log('🔍 ID de l\'équipe:', this.currentUserEquipe.idEquipe);
+      this.tacheService.getTachesByEquipe(this.currentUserEquipe.idEquipe).subscribe({
+        next: (taches) => {
+          console.log('✅ Tâches de l\'équipe chargées:', taches.length);
+          console.log('📋 Détail des tâches reçues:', taches);
+          this.taches = taches;
+          console.log('📋 Tâches disponibles pour l\'équipe:', this.taches.length);
+          
+          // Si aucune tâche n'est trouvée pour l'équipe, afficher un message informatif
+          if (taches.length === 0) {
+            this.toastrService.info(
+              `Aucune tâche trouvée pour l'équipe "${this.currentUserEquipe?.nom}". Vous pouvez en créer dans la section Tâches.`,
+              'Aucune tâche'
+            );
+          }
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors du chargement des tâches de l\'équipe:', error);
+          console.error('🔍 Statut de l\'erreur:', error.status);
+          console.error('🔍 Message d\'erreur:', error.message);
+          
+          // Fallback temporaire pour le débogage : charger toutes les tâches
+          console.log('🔄 FALLBACK TEMPORAIRE: chargement de toutes les tâches pour débogage');
+          this.loadAllTachesForDebugging();
+        }
+      });
+    } else {
+      console.log('⚠️ Aucune équipe définie pour l\'utilisateur ou ID équipe undefined');
+      console.log('🔍 currentUserEquipe:', this.currentUserEquipe);
+      console.log('🔍 idEquipe:', this.currentUserEquipe?.idEquipe);
+      
+      // Fallback temporaire pour le débogage : charger toutes les tâches
+      console.log('🔄 FALLBACK TEMPORAIRE: chargement de toutes les tâches car pas d\'équipe valide');
+      this.loadAllTachesForDebugging();
+    }
+  }
+
+  private loadAllTachesForDebugging() {
+    console.log('🔧 DÉBOGAGE: Chargement de toutes les tâches');
     this.tacheService.getTaches().subscribe({
       next: (taches) => {
-        console.log('✅ Toutes les tâches reçues:', taches);
+        console.log('📋 DÉBOGAGE: Toutes les tâches chargées:', taches.length);
+        console.log('📋 DÉBOGAGE: Détail des tâches:', taches);
         this.taches = taches;
-        console.log('📋 Tâches assignées au composant:', this.taches);
-        this.loading = false;
-      },
-      error: (error) => {
-        console.error('❌ Erreur lors du chargement des tâches:', error);
-        console.log('🛠️ API des tâches non disponible');
-        
-        // Pas de données mock, liste vide
-        this.taches = [];
-        this.loading = false;
         
         this.toastrService.warning(
-          'API des tâches non disponible',
-          'Attention'
+          `Mode débogage: ${taches.length} tâches chargées (toutes équipes confondues). Vérifiez l'assignation à l'équipe.`,
+          'Mode débogage'
+        );
+      },
+      error: (error) => {
+        console.error('❌ DÉBOGAGE: Erreur lors du chargement de toutes les tâches:', error);
+        this.taches = [];
+        this.toastrService.danger(
+          'Impossible de charger les tâches. Vérifiez la connexion au serveur.',
+          'Erreur de connexion'
         );
       }
     });
   }
 
+  private loadAllTachesAsFallback() {
+    // Rediriger vers la méthode de débogage
+    console.warn('⚠️ loadAllTachesAsFallback appelée - redirection vers débogage');
+    this.loadAllTachesForDebugging();
+  }
+
   loadTachesProjet(projetId: number) {
-    this.loadAllTaches();
+    // Respecter le filtrage par équipe même lors de la sélection d'un projet
+    // Les tâches affichées doivent toujours être celles de l'équipe de l'utilisateur
+    console.log('🎯 Projet sélectionné:', projetId, '- Maintien du filtrage par équipe');
+    // Ne pas recharger les tâches, garder celles de l'équipe
+    // this.loadAllTaches(); // Commenté pour éviter le rechargement
   }
 
   private loadAllTachesAndFilter(projetId: number) {
-    this.loadAllTaches();
+    // Respecter le filtrage par équipe même lors du filtrage par projet
+    // Les tâches affichées doivent toujours être celles de l'équipe de l'utilisateur
+    console.log('🎯 Filtrage par projet:', projetId, '- Maintien du filtrage par équipe');
+    // Ne pas recharger les tâches, garder celles de l'équipe
+    // this.loadAllTaches(); // Commenté pour éviter le rechargement
   }
 
-  
+  // ===== MÉTHODE AVEC PERSISTANCE DES TÂCHES =====
   loadPlanificationsByDate() {
-    if (this.selectedDate) {
-      this.loading = true;
-      
-      // Correction du problème de fuseau horaire
-      const year = this.selectedDate.getFullYear();
-      const month = String(this.selectedDate.getMonth() + 1).padStart(2, '0');
-      const day = String(this.selectedDate.getDate()).padStart(2, '0');
-      const dateStr = `${year}-${month}-${day}`;
-      
-      console.log('🔍 Chargement des planifications pour la date:', dateStr);
-      console.log('📅 Date sélectionnée complète:', this.selectedDate);
-      console.log('🌐 URL d\'appel:', `${this.planificationService['apiUrl']}/date/${dateStr}`);
-      
-      this.planificationService.getPlanificationsByDate(dateStr).subscribe({
-        next: (planifications) => {
-          console.log('✅ Planifications reçues:', planifications);
-          console.log('📊 Nombre de planifications:', planifications.length);
-          
-          // Logs détaillés de chaque planification
-          planifications.forEach((p, index) => {
-            console.log(`📝 Planification ${index + 1}:`, {
-              id: p.id,
-              date: p.date,
-              listeId: p.listeId,
-              tache: p.tache,
-              projet: p.projet,
-              heureDebut: p.heureDebut,
-              heureFin: p.heureFin
-            });
-          });
-          
-          this.planifications = planifications;
-          this.loading = false;
-          
-          if (planifications.length > 0) {
-            this.toastrService.success(
-              `${planifications.length} planification(s) trouvée(s)`,
-              'Succès'
-            );
-          }
-        },
-        error: (error) => {
-          console.error('❌ Erreur lors du chargement des planifications:', error);
-          console.log('🔍 Détails de l\'erreur:', {
-            status: error.status,
-            statusText: error.statusText,
-            message: error.message,
-            url: error.url
-          });
-          
-          this.planifications = [];
-          this.loading = false;
-          
-          this.toastrService.danger(
-            'Erreur lors du chargement des planifications',
-            'Erreur'
-          );
-        }
-      });
-    } else {
-      console.log('⚠️ Aucune date sélectionnée');
+    if (!this.currentUser) {
+      return;
     }
+
+    this.loading = true;
+    
+    // Correction du problème de fuseau horaire
+    const year = this.selectedDate.getFullYear();
+    const month = String(this.selectedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(this.selectedDate.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
+    // 👑 Déterminer quel utilisateur utiliser (admin ou utilisateur connecté)
+    const targetUserId = this.getCurrentViewUserId();
+    
+    console.log('🔍 Chargement des planifications pour la date:', dateStr);
+    console.log('👤 Utilisateur cible:', targetUserId);
+    console.log('👑 Mode admin:', this.isAdmin);
+    
+    // 1️⃣ Charger les planifications du jour sélectionné
+    const planificationsJour = this.planificationService.getPlanificationsByUserAndDate(targetUserId, dateStr);
+    
+    // 2️⃣ Charger les tâches non terminées des jours précédents
+    const tachesEnCours = this.loadTachesEnCoursFromPreviousDays(dateStr);
+    
+    // 3️⃣ Combiner les deux
+    forkJoin({
+      planificationsJour: planificationsJour,
+      tachesEnCours: tachesEnCours
+    }).subscribe({
+      next: (result) => {
+        console.log('✅ Planifications du jour:', result.planificationsJour.length);
+        console.log('✅ Tâches en cours des jours précédents:', result.tachesEnCours.length);
+        
+        // Combiner les planifications en évitant les doublons
+        const planificationsCompletes = this.combinerPlanifications(
+          result.planificationsJour, 
+          result.tachesEnCours, 
+          dateStr
+        );
+        
+        this.planifications = planificationsCompletes;
+        console.log('🎯 Total planifications affichées:', this.planifications.length);
+        
+        this.loading = false;
+      },
+      error: (error) => {
+        console.error('❌ Erreur lors du chargement des planifications:', error);
+        // Fallback : charger seulement les planifications du jour
+        this.planificationService.getPlanificationsByUserAndDate(targetUserId, dateStr).subscribe({
+          next: (planifications) => {
+            this.planifications = planifications;
+            this.loading = false;
+          },
+          error: (fallbackError) => {
+            console.error('❌ Erreur fallback:', fallbackError);
+            this.planifications = [];
+            this.loading = false;
+          }
+        });
+      }
+    });
   }
 
   onDateChange(date: Date) {
     this.selectedDate = date;
-    this.planificationForm.patchValue({ date });
     this.loadPlanificationsByDate();
   }
 
   onSubmit() {
-    this.planificationForm.patchValue({
-      projetId: this.selectedProjet,
-      tacheId: this.selectedTache,
-      date: this.selectedDate,
-      heureDebut: this.heureDebut,
-      heureFin: this.heureFin,
-      description: this.description
-    });
+    if (!this.planificationForm.valid) {
+      console.log('❌ Formulaire invalide:', this.getFormErrors());
+      this.toastrService.danger('Veuillez remplir tous les champs requis', 'Formulaire invalide');
+      return;
+    }
 
-    console.log('📋 État du formulaire avant soumission:', {
-      formValid: this.planificationForm.valid,
-      formValue: this.planificationForm.value,
-      selectedTache: this.selectedTache,
-      selectedProjet: this.selectedProjet,
-      isEditMode: this.isEditMode,
-      editingPlanification: this.editingPlanification,
-      formErrors: this.getFormErrors()
-    });
+    if (!this.selectedTache || !this.selectedProjet) {
+      this.toastrService.danger('Veuillez sélectionner un projet et une tâche', 'Sélection manquante');
+      return;
+    }
 
-    if (this.planificationForm.valid && this.selectedTache && this.selectedProjet) {
-      if (this.heureDebut >= this.heureFin) {
-        this.toastrService.warning('L\'heure de fin doit être postérieure à l\'heure de début', 'Attention');
-        return;
-      }
+    // Validation des heures
+    const debut = this.parseTime(this.heureDebut);
+    const fin = this.parseTime(this.heureFin);
+    
+    if (debut >= fin) {
+      this.toastrService.danger('L\'heure de fin doit être postérieure à l\'heure de début', 'Horaire invalide');
+      return;
+    }
 
-      // Correction du problème de fuseau horaire
-      const year = this.selectedDate.getFullYear();
-      const month = String(this.selectedDate.getMonth() + 1).padStart(2, '0');
-      const day = String(this.selectedDate.getDate()).padStart(2, '0');
-      const dateStr = `${year}-${month}-${day}`;
+    // Correction du problème de fuseau horaire
+    const year = this.selectedDate.getFullYear();
+    const month = String(this.selectedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(this.selectedDate.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
 
-      if (this.isEditMode && this.editingPlanification?.id) {
-        // Mode édition - mise à jour
-        this.updatePlanification(this.editingPlanification.id, dateStr);
-      } else {
-        // Mode création - nouvelle planification
-        this.createPlanification(dateStr);
-      }
+    if (this.isEditMode && this.editingPlanification) {
+      this.updatePlanification(this.editingPlanification.id!, dateStr);
     } else {
-      this.toastrService.warning('Veuillez remplir tous les champs requis', 'Attention');
-      console.log('⚠️ Formulaire invalide:', {
-        formValid: this.planificationForm.valid,
-        selectedTache: this.selectedTache,
-        selectedProjet: this.selectedProjet
-      });
+      this.createPlanification(dateStr);
     }
   }
 
+  private parseTime(timeStr: string): number {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+  }
+
+  // ===== MÉTHODE SIMPLIFIÉE POUR LA CRÉATION =====
   private createPlanification(dateStr: string) {
+    if (!this.currentUser) {
+      this.toastrService.danger('Utilisateur non connecté', 'Erreur');
+      return;
+    }
+
     const planificationData: CreatePlanificationDto = {
       date: dateStr,
       heureDebut: this.heureDebut,
@@ -452,7 +599,8 @@ export class PlanificationComponent implements OnInit {
       description: this.description || '',
       tacheId: this.selectedTache!,
       projetId: this.selectedProjet!,
-      listeId: EtatListe.Todo
+      listeId: EtatListe.Todo,
+      userId: this.currentUser.id // Envoyer l'UserId
     };
 
     console.log('📤 Création d\'une nouvelle planification:', planificationData);
@@ -461,32 +609,12 @@ export class PlanificationComponent implements OnInit {
       next: (planification) => {
         console.log('✅ Planification créée:', planification);
         this.toastrService.success('Planification créée avec succès', 'Succès');
-        this.loadPlanificationsByDate();
         this.resetForm();
+        this.loadPlanificationsByDate();
       },
       error: (error) => {
         console.error('❌ Erreur lors de la création:', error);
-        
-        const tacheSelected = this.taches.find(t => t.id === this.selectedTache);
-        const projetSelected = this.projets.find(p => p.id === this.selectedProjet);
-        
-        const newPlanification: Planification = {
-          id: Date.now(),
-          date: planificationData.date,
-          heureDebut: planificationData.heureDebut,
-          heureFin: planificationData.heureFin,
-          description: planificationData.description,
-          tacheId: planificationData.tacheId,
-          projetId: planificationData.projetId,
-          listeId: planificationData.listeId,
-          tache: tacheSelected,
-          projet: projetSelected
-        };
-        
-        this.planifications.push(newPlanification);
-        
-        this.toastrService.success('Planification ajoutée localement', 'Succès');
-        this.resetForm();
+        this.toastrService.danger('Erreur lors de la création de la planification', 'Erreur');
       }
     });
   }
@@ -549,33 +677,38 @@ export class PlanificationComponent implements OnInit {
   }
 
   private resetForm() {
+    this.selectedProjet = null;
+    this.selectedTache = null;
     this.heureDebut = '08:00';
     this.heureFin = '09:00';
     this.description = '';
-    this.selectedTache = null;
-    this.selectedProjet = null;
-    this.taches = [];
-    this.isEditMode = false;
-    this.editingPlanification = null;
+    
+    this.planificationForm.reset({
+      projetId: '',
+      tacheId: '',
+      description: '',
+      date: new Date(),
+      heureDebut: '08:00',
+      heureFin: '09:00'
+    });
   }
 
   getFormErrors() {
-    let formErrors: any = {};
+    const errors: any = {};
     Object.keys(this.planificationForm.controls).forEach(key => {
-      const controlErrors = this.planificationForm.get(key)?.errors;
-      if (controlErrors) {
-        formErrors[key] = controlErrors;
+      const control = this.planificationForm.get(key);
+      if (control && !control.valid) {
+        errors[key] = control.errors;
       }
     });
-    return formErrors;
+    return errors;
   }
 
-  // Méthode pour charger les utilisateurs
   loadUtilisateurs() {
     this.utilisateurService.getUtilisateurs().subscribe({
       next: (utilisateurs) => {
         this.utilisateurs = utilisateurs;
-        console.log('👥 Utilisateurs chargés:', this.utilisateurs);
+        console.log('✅ Utilisateurs chargés:', utilisateurs.length);
       },
       error: (error) => {
         console.error('❌ Erreur lors du chargement des utilisateurs:', error);
@@ -583,29 +716,578 @@ export class PlanificationComponent implements OnInit {
     });
   }
 
-  // Méthode pour récupérer l'utilisateur assigné à une tâche
   getAssignedUser(assigneId: number): Utilisateur | null {
-    if (!assigneId || !this.utilisateurs.length) {
-      return null;
-    }
     return this.utilisateurs.find(user => user.id === assigneId) || null;
   }
 
-  // Méthode pour générer les initiales de l'utilisateur
   getUserInitials(user: Utilisateur): string {
-    if (!user) return '?';
     const prenom = user.prenom || '';
     const nom = user.nom || '';
     return `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase();
   }
 
-  // Méthode pour obtenir une couleur basée sur l'utilisateur
   getUserColor(userId: number): string {
-    const colors = [
-      '#3366ff', '#00d68f', '#ffaa00', '#ff3d71', 
-      '#00f5ff', '#a100ff', '#ff9800', '#4caf50',
-      '#9c27b0', '#2196f3', '#ff5722', '#607d8b'
-    ];
+    const colors = ['#3366cc', '#dc3912', '#ff9900', '#109618', '#990099', '#0099c6', '#dd4477', '#66aa00', '#b82e2e', '#316395'];
     return colors[userId % colors.length];
   }
-} 
+
+  private fallbackToTokenData(tokenData: any, userId: string) {
+    this.currentUser = {
+      id: parseInt(userId),
+      email: tokenData.email || '',
+      nom: tokenData.nom || '',
+      prenom: tokenData.prenom || '',
+      picture: null
+    };
+    console.log('👤 Utilisateur depuis token (fallback):', this.currentUser);
+    // Charger les données nécessaires
+    this.loadProjets();
+    this.loadUtilisateurs();
+    this.loadPlanificationsByDate();
+    this.loadUserEquipe();
+  }
+
+  loadUserEquipe() {
+    if (this.currentUser) {
+      console.log('🔍 Recherche de l\'équipe pour l\'utilisateur:', this.currentUser.id);
+      
+      this.membreEquipeService.getMembres().subscribe({
+        next: (membres) => {
+          console.log('📋 Tous les membres récupérés:', membres);
+          console.log('🔍 Premier membre (exemple):', JSON.stringify(membres[0], null, 2));
+          
+          // Essayer différentes façons de trouver l'utilisateur
+          let membreUtilisateur = membres.find(m => m.utilisateurId === this.currentUser!.id);
+          
+          if (!membreUtilisateur) {
+            // Essayer avec UtilisateurId (majuscule)
+            membreUtilisateur = membres.find(m => (m as any).UtilisateurId === this.currentUser!.id);
+          }
+          
+          if (!membreUtilisateur && (membres as any).some((m: any) => m.utilisateur)) {
+            // Essayer via l'objet utilisateur imbriqué
+            membreUtilisateur = membres.find(m => (m as any).utilisateur?.id === this.currentUser!.id);
+          }
+          
+          console.log('👤 Membre utilisateur trouvé:', membreUtilisateur);
+          console.log('🔍 Structure complète du membre:', JSON.stringify(membreUtilisateur, null, 2));
+          
+          if (membreUtilisateur && membreUtilisateur.equipe) {
+            this.currentUserEquipe = {
+              idEquipe: membreUtilisateur.equipe.idEquipe || (membreUtilisateur.equipe as any).id,
+              nom: membreUtilisateur.equipe.nom,
+              statut: 0 // Valeur par défaut
+            };
+            console.log('✅ Équipe de l\'utilisateur chargée:', this.currentUserEquipe);
+            // Charger les tâches de l'équipe maintenant qu'on a les infos
+            this.loadAllTaches();
+          } else if (membreUtilisateur && (membreUtilisateur as any).Equipe) {
+            // Essayer avec Equipe (majuscule)
+            const equipe = (membreUtilisateur as any).Equipe;
+            this.currentUserEquipe = {
+              idEquipe: equipe.IdEquipe || equipe.id || equipe.idEquipe,
+              nom: equipe.Nom || equipe.nom,
+              statut: 0
+            };
+            console.log('✅ Équipe de l\'utilisateur chargée (Majuscule):', this.currentUserEquipe);
+            // Charger les tâches de l'équipe maintenant qu'on a les infos
+            this.loadAllTaches();
+          } else if (membreUtilisateur && membreUtilisateur.equipeId) {
+            // Récupérer l'équipe par son ID
+            console.log('🔍 Récupération equipe avec ID:', membreUtilisateur.equipeId);
+            this.equipeService.getEquipeForCrud(membreUtilisateur.equipeId).subscribe({
+              next: (equipe) => {
+                console.log('🔍 Équipe brute reçue de l\'API:', equipe);
+                console.log('🔍 Structure complète de l\'équipe:', JSON.stringify(equipe, null, 2));
+                
+                // Essayer différentes propriétés pour l'ID
+                let equipeId = (equipe as any).idEquipe || 
+                              (equipe as any).id || 
+                              (equipe as any).IdEquipe ||
+                              membreUtilisateur.equipeId; // Fallback vers l'ID du membre
+                
+                console.log('🔍 ID équipe extrait:', equipeId);
+                
+                this.currentUserEquipe = {
+                  idEquipe: equipeId,
+                  nom: (equipe as any).nom || (equipe as any).Nom || 'Équipe inconnue',
+                  statut: 0
+                };
+                console.log('✅ Équipe récupérée par ID:', this.currentUserEquipe);
+                
+                // Vérifier que l'ID est bien défini avant de charger les tâches
+                if (this.currentUserEquipe.idEquipe) {
+                  console.log('✅ ID équipe valide, chargement des tâches');
+                  this.loadAllTaches();
+                } else {
+                  console.error('❌ ID équipe toujours undefined après traitement');
+                  console.log('🔄 Utilisation de l\'ID du membre comme fallback');
+                  this.currentUserEquipe.idEquipe = membreUtilisateur.equipeId;
+                this.loadAllTaches();
+                }
+              },
+              error: (error) => {
+                console.error('❌ Erreur lors de la récupération équipe:', error);
+                // Ne pas créer d'équipe par défaut, laisser null
+                this.currentUserEquipe = null;
+                console.log('⚠️ Impossible de récupérer l\'équipe, utilisateur sans équipe');
+                // Charger les tâches (qui sera une liste vide)
+                this.loadAllTaches();
+              }
+            });
+          } else {
+            console.log('⚠️ Utilisateur non assigné à une équipe');
+            console.log('🔍 Structure du membre:', membreUtilisateur);
+            
+            // Ne pas créer d'équipe par défaut
+            this.currentUserEquipe = null;
+            console.log('⚠️ Aucune équipe trouvée pour cet utilisateur');
+            // Charger les tâches (qui sera une liste vide)
+            this.loadAllTaches();
+          }
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors du chargement de l\'équipe:', error);
+          
+          // Ne pas créer d'équipe par défaut en cas d'erreur
+          this.currentUserEquipe = null;
+          console.log('❌ Erreur API, utilisateur sans équipe');
+          // Charger les tâches (qui sera une liste vide)
+          this.loadAllTaches();
+        }
+      });
+    }
+  }
+
+  // 🔄 Charger les tâches non terminées des jours précédents
+  private loadTachesEnCoursFromPreviousDays(dateActuelle: string): Observable<Planification[]> {
+    if (!this.currentUser) {
+      return new Observable(observer => {
+        observer.next([]);
+        observer.complete();
+      });
+    }
+
+    // 👑 Utiliser l'utilisateur cible (admin ou utilisateur connecté)
+    const targetUserId = this.getCurrentViewUserId();
+    
+    console.log('🔍 Recherche des tâches en cours des jours précédents...');
+    console.log('👤 Pour l\'utilisateur:', targetUserId);
+    
+    // Calculer la date d'il y a 7 jours pour limiter la recherche
+    const dateActuelleObj = new Date(dateActuelle);
+    const dateLimite = new Date(dateActuelleObj);
+    dateLimite.setDate(dateLimite.getDate() - 7);
+    
+    const dateLimiteStr = dateLimite.toISOString().split('T')[0];
+    
+    console.log('📅 Recherche entre', dateLimiteStr, 'et', dateActuelle);
+    
+    // Créer un Observable qui recherche les planifications des 7 derniers jours
+    return new Observable<Planification[]>(observer => {
+      // Pour l'instant, on va chercher jour par jour (on pourrait optimiser avec une API dédiée)
+      const observables: Observable<Planification[]>[] = [];
+      
+      for (let i = 1; i <= 7; i++) {
+        const dateRecherche = new Date(dateActuelleObj);
+        dateRecherche.setDate(dateRecherche.getDate() - i);
+        const dateRechercheStr = dateRecherche.toISOString().split('T')[0];
+        
+        observables.push(
+          this.planificationService.getPlanificationsByUserAndDate(targetUserId, dateRechercheStr)
+        );
+      }
+      
+      // Exécuter toutes les recherches en parallèle
+      forkJoin(observables).subscribe({
+        next: (resultats) => {
+          // Aplatir tous les résultats
+          const toutesLesPlanifications = resultats.reduce((acc, val) => acc.concat(val), []);
+          
+          // Filtrer seulement les tâches non terminées (En cours, Todo, Test)
+          const tachesNonTerminees = toutesLesPlanifications.filter(planif => 
+            planif.listeId === EtatListe.EnCours || 
+            planif.listeId === EtatListe.Todo || 
+            planif.listeId === EtatListe.Test
+          );
+          
+          console.log('🎯 Tâches non terminées trouvées:', tachesNonTerminees.length);
+          observer.next(tachesNonTerminees);
+          observer.complete();
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors de la recherche des tâches précédentes:', error);
+          observer.next([]);
+          observer.complete();
+        }
+      });
+    });
+  }
+
+  // 🔀 Combiner les planifications du jour avec les tâches en cours précédentes
+  private combinerPlanifications(
+    planificationsJour: Planification[], 
+    tachesEnCours: Planification[], 
+    dateActuelle: string
+  ): Planification[] {
+    console.log('🔀 Combinaison des planifications...');
+    
+    // 1️⃣ Commencer avec les planifications du jour
+    const resultat = [...planificationsJour];
+    
+    // 2️⃣ Ajouter les tâches en cours des jours précédents qui ne sont pas déjà présentes
+    tachesEnCours.forEach(tacheEnCours => {
+      // Vérifier si cette tâche n'est pas déjà planifiée aujourd'hui
+      const dejaPresente = resultat.some(planifJour => 
+        planifJour.tacheId === tacheEnCours.tacheId
+      );
+      
+      if (!dejaPresente) {
+        // Créer une nouvelle planification pour aujourd'hui avec la tâche en cours
+        const nouvellePlanification: Planification = {
+          ...tacheEnCours,
+          id: undefined, // Nouvelle planification, pas d'ID
+          date: dateActuelle, // Date d'aujourd'hui
+          // Garder le statut actuel de la tâche
+          listeId: tacheEnCours.listeId,
+          // Optionnel : ajuster les horaires pour aujourd'hui
+          heureDebut: tacheEnCours.heureDebut || '08:00',
+          heureFin: tacheEnCours.heureFin || '09:00',
+          description: `${tacheEnCours.description || ''} (Reportée du ${tacheEnCours.date})`.trim()
+        };
+        
+        resultat.push(nouvellePlanification);
+        console.log(`➕ Tâche reportée: "${tacheEnCours.tache?.titre}" du ${tacheEnCours.date}`);
+      } else {
+        console.log(`⏭️ Tâche déjà planifiée aujourd'hui: "${tacheEnCours.tache?.titre}"`);
+      }
+    });
+    
+    console.log('✅ Total après combinaison:', resultat.length);
+    return resultat;
+  }
+
+  // 🧹 Nettoyer la description pour supprimer les textes de prédiction IA indésirables
+  getCleanDescription(description: string | undefined): string | null {
+    if (!description) return null;
+    
+    // Supprimer les textes de prédiction IA
+    let cleanDescription = description
+      .replace(/\(Durée estimée IA:.*?\)/g, '') // Supprimer "(Durée estimée IA: X minutes)"
+      .replace(/Durée estimée IA:.*$/gm, '') // Supprimer "Durée estimée IA: X" en fin de ligne
+      .trim();
+    
+    // Si la description devient vide après nettoyage, retourner null
+    return cleanDescription.length > 0 ? cleanDescription : null;
+  }
+
+  // 📝 Créer une nouvelle planification pour une tâche reportée
+  private creerPlanificationPourTacheReportee(planification: Planification, nouvelEtat: EtatListe) {
+    if (!this.currentUser) {
+      this.toastrService.danger('Utilisateur non connecté', 'Erreur');
+      return;
+    }
+
+    // Correction du problème de fuseau horaire pour la date actuelle
+    const year = this.selectedDate.getFullYear();
+    const month = String(this.selectedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(this.selectedDate.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+
+    const planificationData: CreatePlanificationDto = {
+      date: dateStr,
+      heureDebut: planification.heureDebut || '08:00',
+      heureFin: planification.heureFin || '09:00',
+      description: this.getCleanDescription(planification.description) || '',
+      tacheId: planification.tacheId!,
+      projetId: planification.projetId!,
+      listeId: nouvelEtat, // Utiliser le nouveau statut
+      userId: this.currentUser.id
+    };
+
+    console.log('📤 Création d\'une planification pour tâche reportée:', planificationData);
+
+    this.planificationService.createPlanification(planificationData).subscribe({
+      next: (nouvellePlanification) => {
+        console.log('✅ Planification créée pour tâche reportée:', nouvellePlanification);
+        
+        // Remplacer la planification temporaire par la vraie
+        const index = this.planifications.findIndex(p => 
+          p.tacheId === planification.tacheId && !p.id
+        );
+        
+        if (index !== -1) {
+          // Remplacer par la nouvelle planification avec ID
+          this.planifications[index] = {
+            ...nouvellePlanification,
+            tache: planification.tache, // Garder les infos de la tâche
+            projet: planification.projet // Garder les infos du projet
+          };
+        }
+        
+        this.toastrService.success(
+          `Tâche reportée et statut changé vers "${this.getEtatLabel(nouvelEtat)}"`, 
+          'Succès'
+        );
+      },
+      error: (error) => {
+        console.error('❌ Erreur lors de la création de la planification:', error);
+        
+        // Revenir en arrière en cas d'erreur
+        planification.listeId = planification.listeId === nouvelEtat ? EtatListe.Todo : planification.listeId;
+        
+        this.toastrService.danger(
+          'Erreur lors de la création de la planification', 
+          'Erreur'
+        );
+      }
+         });
+   }
+
+  // 👑 Méthodes pour l'interface administrateur
+  
+  loadAllUsersForAdmin() {
+    console.log('👑 Chargement de tous les utilisateurs pour l\'admin');
+    
+    // Charger les utilisateurs et leurs équipes
+    forkJoin({
+      users: this.utilisateurService.getUtilisateurs(),
+      membres: this.membreEquipeService.getMembres()
+    }).subscribe({
+      next: (result) => {
+        this.availableUsers = result.users;
+        console.log('✅ Utilisateurs chargés pour admin:', result.users.length);
+        
+        // Créer le cache des équipes
+        this.buildUserTeamsCache(result.membres);
+        console.log('✅ Cache des équipes créé:', this.userTeams.size, 'mappings');
+      },
+      error: (error) => {
+        console.error('❌ Erreur lors du chargement des utilisateurs pour admin:', error);
+        this.toastrService.danger('Erreur lors du chargement des utilisateurs', 'Erreur');
+        
+        // Fallback : charger seulement les utilisateurs
+        this.utilisateurService.getUtilisateurs().subscribe({
+          next: (users) => {
+            this.availableUsers = users;
+            console.log('✅ Utilisateurs chargés (fallback):', users.length);
+          },
+          error: (fallbackError) => {
+            console.error('❌ Erreur fallback:', fallbackError);
+          }
+        });
+      }
+    });
+  }
+
+  // 🏗️ Construire le cache des équipes par utilisateur
+  private buildUserTeamsCache(membres: any[]) {
+    this.userTeams.clear();
+    console.log('🏗️ Construction du cache des équipes avec', membres.length, 'membres');
+    
+    membres.forEach((membre, index) => {
+      console.log(`🔍 Membre ${index + 1}:`, JSON.stringify(membre, null, 2));
+      
+      // Essayer différentes propriétés pour l'ID utilisateur
+      const userId = membre.utilisateurId || 
+                    membre.UtilisateurId || 
+                    (membre.utilisateur && membre.utilisateur.id);
+      
+      // Essayer différentes propriétés pour l'équipe
+      const equipe = membre.equipe || 
+                     membre.Equipe;
+      
+      console.log(`🔍 UserId trouvé:`, userId);
+      console.log(`🔍 Équipe trouvée:`, equipe);
+      
+      if (userId && equipe) {
+        const equipeNom = equipe.nom || equipe.Nom || equipe.name || 'Équipe inconnue';
+        this.userTeams.set(userId, equipeNom);
+        console.log(`✅ Cache: Utilisateur ${userId} → Équipe "${equipeNom}"`);
+      } else {
+        console.log(`❌ Membre ignoré - UserId: ${userId}, Équipe: ${equipe ? 'présente' : 'manquante'}`);
+        
+        // Si on a un equipeId mais pas de nom, essayer de récupérer le nom
+        const equipeId = membre.equipeId || membre.EquipeId;
+        if (userId && equipeId) {
+          this.loadEquipeNameById(userId, equipeId);
+        }
+      }
+    });
+    
+    console.log('📊 Cache final des équipes:', Array.from(this.userTeams.entries()));
+    
+    // Si aucune équipe n'a été trouvée, essayer une approche alternative
+    if (this.userTeams.size === 0) {
+      console.log('⚠️ Aucune équipe trouvée, tentative de récupération alternative...');
+      this.loadUserTeamsAlternative();
+    }
+  }
+
+  // 🔄 Méthode alternative pour charger les équipes
+  private loadUserTeamsAlternative() {
+    console.log('🔄 Chargement alternatif des équipes...');
+    
+    // Récupérer les équipes et les membres en parallèle
+    forkJoin({
+      equipes: this.equipeService.getEquipes(),
+      membres: this.membreEquipeService.getMembres()
+    }).subscribe({
+      next: (result) => {
+        console.log('✅ Équipes récupérées:', result.equipes);
+        console.log('✅ Membres récupérés (alternative):', result.membres);
+        
+                 // Créer un map des équipes par ID pour un accès rapide
+         const equipesMap = new Map();
+         result.equipes.forEach(equipe => {
+           equipesMap.set((equipe as any).idEquipe || equipe.id, equipe.nom);
+         });
+         
+         console.log('📋 Map des équipes:', Array.from(equipesMap.entries()));
+         
+         // Mapper les utilisateurs avec leurs équipes
+         result.membres.forEach(membre => {
+           const userId = membre.utilisateurId;
+           const equipeId = membre.equipeId || 
+                           (membre.equipe && (membre.equipe as any).idEquipe);
+          
+          if (userId && equipeId) {
+            const equipeNom = equipesMap.get(equipeId);
+            if (equipeNom) {
+              this.userTeams.set(userId, equipeNom);
+              console.log(`✅ Alternative: Utilisateur ${userId} → Équipe "${equipeNom}"`);
+            }
+          }
+        });
+        
+        console.log('📊 Cache final après méthode alternative:', Array.from(this.userTeams.entries()));
+      },
+      error: (error) => {
+        console.error('❌ Erreur lors du chargement alternatif:', error);
+      }
+    });
+  }
+
+  onUserSelectionChange(userId: number) {
+    console.log('👑 Changement de sélection utilisateur:', userId);
+    this.selectedUserId = userId;
+    
+    // Recharger les planifications pour l'utilisateur sélectionné
+    this.loadPlanificationsByDate();
+  }
+
+  getCurrentViewUserId(): number {
+    // Si admin et utilisateur sélectionné, retourner l'utilisateur sélectionné
+    if (this.isAdmin && this.selectedUserId) {
+      return this.selectedUserId;
+    }
+    // Sinon, retourner l'utilisateur connecté
+    return this.currentUser?.id || 0;
+  }
+
+  getSelectedUserName(): string {
+    if (this.isAdmin && this.selectedUserId) {
+      const selectedUser = this.availableUsers.find(u => u.id === this.selectedUserId);
+      if (selectedUser) {
+        return `${selectedUser.prenom} ${selectedUser.nom}`;
+      }
+    }
+    return `${this.currentUser?.prenom || ''} ${this.currentUser?.nom || ''}`.trim();
+  }
+
+  // 👥 Méthodes pour la gestion des équipes et avatars
+
+  getUserTeam(userId: number): string | null {
+    const team = this.userTeams.get(userId);
+    console.log(`🔍 Recherche équipe pour utilisateur ${userId}:`, team);
+    
+    // Si l'équipe affiche "Équipe X", essayer de récupérer le vrai nom
+    if (team && team.startsWith('Équipe ') && /Équipe \d+/.test(team)) {
+      console.log(`🔧 Équipe avec ID détectée: ${team}, recherche du vrai nom...`);
+      const equipeId = parseInt(team.replace('Équipe ', ''));
+      
+      // Chercher dans toutes les équipes disponibles
+      this.equipeService.getEquipes().subscribe({
+        next: (equipes) => {
+          const equipe = equipes.find(e => (e as any).idEquipe === equipeId || (e as any).id === equipeId);
+          if (equipe && equipe.nom) {
+            this.userTeams.set(userId, equipe.nom);
+            console.log(`✅ Vrai nom d'équipe trouvé: ${equipe.nom}`);
+          }
+        },
+        error: (error) => {
+          console.error(`❌ Erreur lors de la recherche d'équipe:`, error);
+        }
+      });
+    }
+    
+    // Si pas d'équipe trouvée, essayer de la chercher directement
+    if (!team && this.availableUsers.length > 0) {
+      const user = this.availableUsers.find(u => u.id === userId);
+      if (user) {
+        console.log(`🔍 Utilisateur trouvé:`, user);
+        // Essayer de récupérer l'équipe depuis l'utilisateur si elle y est
+        if ((user as any).equipe) {
+          const equipeNom = (user as any).equipe.nom || (user as any).equipe.Nom;
+          if (equipeNom) {
+            this.userTeams.set(userId, equipeNom);
+            console.log(`✅ Équipe trouvée via utilisateur: ${equipeNom}`);
+            return equipeNom;
+          }
+        }
+      }
+    }
+    
+    return team || null;
+  }
+
+  getSelectedUserInitials(): string {
+    if (this.isAdmin && this.selectedUserId) {
+      const selectedUser = this.availableUsers.find(u => u.id === this.selectedUserId);
+      if (selectedUser) {
+        return this.getUserInitials(selectedUser);
+      }
+    }
+    return this.getUserInitials(this.currentUser as any);
+  }
+
+  getSelectedUserTeam(): string | null {
+    if (this.isAdmin && this.selectedUserId) {
+      return this.getUserTeam(this.selectedUserId);
+    }
+    return this.currentUserEquipe?.nom || null;
+  }
+
+  // 🔍 Récupérer le nom d'une équipe par son ID
+  private loadEquipeNameById(userId: number, equipeId: number) {
+    console.log(`🔍 Recherche du nom de l'équipe ${equipeId} pour l'utilisateur ${userId}`);
+    
+    this.equipeService.getEquipeForCrud(equipeId).subscribe({
+      next: (equipe) => {
+        if (equipe && equipe.nom) {
+          this.userTeams.set(userId, equipe.nom);
+          console.log(`✅ Nom d'équipe récupéré: Utilisateur ${userId} → Équipe "${equipe.nom}"`);
+        }
+      },
+      error: (error) => {
+        console.error(`❌ Erreur lors de la récupération de l'équipe ${equipeId}:`, error);
+      }
+         });
+   }
+
+  // 🎨 Méthode pour afficher le nom d'équipe de façon propre
+  getDisplayTeamName(teamName: string | null): string {
+    if (!teamName) return '';
+    
+    // Si c'est "Équipe X", essayer de récupérer le vrai nom
+    if (teamName.startsWith('Équipe ') && /Équipe \d+/.test(teamName)) {
+      // Pour l'instant, retourner un nom générique plus joli
+      const equipeId = teamName.replace('Équipe ', '');
+      return `Équipe #${equipeId}`; // Plus joli que "Équipe 13"
+    }
+    
+    return teamName;
+  }
+
+  
+}    

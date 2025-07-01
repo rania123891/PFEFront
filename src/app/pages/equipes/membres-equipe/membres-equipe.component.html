@@ -3,22 +3,42 @@
     <nb-card>
       <nb-card-header class="d-flex justify-content-between align-items-center">
         <h5>MEMBRES DES ÉQUIPES</h5>
-        <button nbButton status="primary" class="add-button" (click)="openAddForm()" [disabled]="!selectedEquipeId">
-          <nb-icon icon="plus-outline"></nb-icon>
-          AJOUTER MEMBRE
-        </button>
       </nb-card-header>
       <nb-card-body>
-        <!-- Sélection de l'équipe -->
-        <div class="row mb-4">
-          <div class="col-md-4">
+        <!-- Sélection de l'équipe et utilisateur -->
+        <div class="row mb-4 selection-row">
+          <div class="col-md-3">
             <label class="label">Sélectionner une équipe</label>
-            <nb-select fullWidth placeholder="Choisir une équipe" (selectedChange)="onEquipeChange($event)" [(selected)]="selectedEquipeId">
+            <nb-select fullWidth placeholder="Choisir une équipe" (selectedChange)="onEquipeChange($event)" [ngModel]="selectedEquipeId">
               <nb-option [value]="null">Sélectionner une équipe</nb-option>
               <nb-option *ngFor="let equipe of equipes" [value]="equipe.idEquipe">
                 {{ equipe.nom }}
               </nb-option>
             </nb-select>
+          </div>
+          
+          <div class="col-md-3">
+            <label class="label">Sélectionner un utilisateur</label>
+            <nb-select fullWidth multiple placeholder="Choisir des utilisateurs" (selectedChange)="onUtilisateurChange($event)" [ngModel]="selectedUtilisateurIds">
+              <nb-option *ngFor="let user of getUtilisateursDisponibles()" [value]="user.id">
+                {{ getUtilisateurNomComplet(user) }}
+              </nb-option>
+            </nb-select>
+          </div>
+          
+          <div class="col-md-2">
+            <label class="label">Rôle</label>
+            <nb-select fullWidth [ngModel]="selectedRole" (selectedChange)="onRoleChange($event)">
+              <nb-option [value]="roleMembreEquipe.Membre">Membre</nb-option>
+              <nb-option [value]="roleMembreEquipe.ChefEquipe">Chef d'équipe</nb-option>
+            </nb-select>
+          </div>
+          
+          <div class="col-md-4 d-flex align-items-end" style="padding-left: 2rem;">
+            <button nbButton status="primary" (click)="ajouterMembres()" [disabled]="!selectedEquipeId || !selectedUtilisateurIds || selectedUtilisateurIds.length === 0" style="margin-top: 1rem;">
+              <nb-icon icon="plus-outline"></nb-icon>
+              AJOUTER MEMBRE(S)
+            </button>
           </div>
         </div>
 
@@ -36,8 +56,8 @@
             </thead>
             <tbody>
               <tr *ngFor="let membre of membres">
-                <td>{{ membre.utilisateur?.email || 'N/A' }}</td>
-                <td>{{ membre.equipe?.nom || 'N/A' }}</td>
+                <td>{{ getMembreNomComplet(membre) }}</td>
+                <td>{{ membre.equipe?.nom || ('Équipe ID: ' + membre.equipeId) }}</td>
                 <td>
                   <span class="role-badge" [ngClass]="{'role-chef': membre.role === roleMembreEquipe.ChefEquipe, 'role-membre': membre.role === roleMembreEquipe.Membre}">
                     {{ getRoleLabel(membre.role) }}
@@ -57,44 +77,6 @@
               </tr>
             </tbody>
           </table>
-        </div>
-
-        <!-- Formulaire d'ajout -->
-        <div *ngIf="showAddForm" class="mt-4">
-          <form [formGroup]="membreForm" (ngSubmit)="onSubmit()">
-            <div class="row">
-              <div class="col-md-6">
-                <div class="form-group">
-                  <label class="label">Utilisateur</label>
-                  <nb-select fullWidth formControlName="utilisateurId">
-                    <nb-option [value]="null">Sélectionner un utilisateur</nb-option>
-                    <nb-option *ngFor="let user of utilisateurs" [value]="user.id">
-                      {{ user.email }}
-                    </nb-option>
-                  </nb-select>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="form-group">
-                  <label class="label">Rôle</label>
-                  <nb-select fullWidth formControlName="role">
-                    <nb-option [value]="roleMembreEquipe.Membre">Membre</nb-option>
-                    <nb-option [value]="roleMembreEquipe.ChefEquipe">Chef d'équipe</nb-option>
-                  </nb-select>
-                </div>
-              </div>
-            </div>
-            <div class="row mt-3">
-              <div class="col-12">
-                <button nbButton status="primary" type="submit" [disabled]="!membreForm.valid">
-                  Ajouter
-                </button>
-                <button nbButton status="basic" type="button" (click)="cancelForm()" class="ml-2">
-                  Annuler
-                </button>
-              </div>
-            </div>
-          </form>
         </div>
       </nb-card-body>
     </nb-card>

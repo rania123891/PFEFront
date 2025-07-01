@@ -1,0 +1,96 @@
+<div class="affectation-projets-container">
+  <div class="row">
+    <div class="col-md-12">
+      <nb-card>
+        <nb-card-header class="d-flex justify-content-between align-items-center">
+          <h6>Projets Affectés</h6>
+          <button 
+            nbButton 
+            status="primary" 
+            size="small" 
+            (click)="openAffectationForm()" 
+            [disabled]="!equipeId || projetsDisponibles.length === 0">
+            <nb-icon icon="plus-outline"></nb-icon>
+            Affecter un projet
+          </button>
+        </nb-card-header>
+        
+        <nb-card-body>
+          <!-- Formulaire d'affectation -->
+          <div *ngIf="showForm" class="affectation-form mb-4">
+            <form [formGroup]="affectationForm" (ngSubmit)="onSubmit()">
+              <div class="row">
+                <div class="col-md-8">
+                  <div class="form-group">
+                    <label class="label">Sélectionner un projet</label>
+                    <nb-select fullWidth formControlName="projetId" placeholder="Choisir un projet">
+                      <nb-option *ngFor="let projet of projetsDisponibles" [value]="projet.id">
+                        {{ projet.nom }} - {{ getProjetStatut(projet.id!) }}
+                      </nb-option>
+                    </nb-select>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-actions">
+                    <button 
+                      nbButton 
+                      status="primary" 
+                      type="submit" 
+                      [disabled]="!affectationForm.valid || isSubmitting">
+                      <nb-icon icon="checkmark-outline" *ngIf="!isSubmitting"></nb-icon>
+                      <nb-icon icon="loader-outline" *ngIf="isSubmitting" class="rotating"></nb-icon>
+                      {{ isSubmitting ? 'Affectation...' : 'Affecter' }}
+                    </button>
+                    <button 
+                      nbButton 
+                      status="basic" 
+                      type="button" 
+                      (click)="cancelForm()" 
+                      class="ml-2">
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <!-- Liste des projets affectés -->
+          <div *ngIf="isLoading" class="loading-container">
+            <nb-spinner size="medium" status="primary"></nb-spinner>
+            <p>Chargement des projets...</p>
+          </div>
+
+          <div *ngIf="!isLoading && projetsAffeetes.length === 0" class="no-data">
+            <p class="text-muted">Aucun projet affecté à cette équipe.</p>
+          </div>
+
+          <div *ngIf="!isLoading && projetsAffeetes.length > 0" class="projets-list">
+            <div 
+              *ngFor="let projetId of projetsAffeetes" 
+              class="projet-item d-flex justify-content-between align-items-center">
+              <div class="projet-info">
+                <h6>{{ getProjetNom(projetId) }}</h6>
+                <small class="text-muted">Statut: {{ getProjetStatut(projetId) }}</small>
+              </div>
+              <button 
+                nbButton 
+                status="danger" 
+                size="small" 
+                ghost 
+                (click)="retirerProjet(projetId)"
+                title="Retirer cette équipe du projet">
+                <nb-icon icon="trash-2-outline"></nb-icon>
+                Retirer
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="projetsDisponibles.length === 0 && !showForm" class="no-available">
+            <small class="text-muted">Tous les projets disponibles ont été affectés à cette équipe.</small>
+          </div>
+        </nb-card-body>
+      </nb-card>
+    </div>
+  </div>
+</div> 

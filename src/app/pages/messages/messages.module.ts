@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import {
   NbCardModule,
@@ -9,7 +9,9 @@ import {
   NbListModule,
   NbUserModule,
   NbIconModule,
-  NbActionsModule
+  NbActionsModule,
+  NbSpinnerModule,
+  NbFormFieldModule
 } from '@nebular/theme';
 import { MessagesComponent } from './messages.component';
 import { MessageService } from '../../services/message.service';
@@ -20,6 +22,7 @@ import { MessageService } from '../../services/message.service';
   ],
   imports: [
     CommonModule,
+    FormsModule,
     ReactiveFormsModule,
     RouterModule.forChild([
       {
@@ -33,7 +36,9 @@ import { MessageService } from '../../services/message.service';
     NbListModule,
     NbUserModule,
     NbIconModule,
-    NbActionsModule
+    NbActionsModule,
+    NbSpinnerModule,
+    NbFormFieldModule
   ],
   providers: [MessageService]
 })

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Token JWT</title>
+</head>
+<body>
+    <h1>Test de décodage du Token JWT</h1>
+    <textarea id="tokenInput" placeholder="Collez votre token JWT ici" style="width: 100%; height: 100px;"></textarea>
+    <br><br>
+    <button onclick="decodeToken()">Décoder le Token</button>
+    <br><br>
+    <pre id="output"></pre>
+
+    <script>
+        function decodeToken() {
+            const token = document.getElementById('tokenInput').value.trim();
+            if (!token) {
+                alert('Veuillez entrer un token');
+                return;
+            }
+
+            try {
+                // Séparer le token en parties
+                const parts = token.split('.');
+                if (parts.length !== 3) {
+                    throw new Error('Token JWT invalide');
+                }
+
+                // Décoder le payload (partie du milieu)
+                const payload = parts[1];
+                const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+
+                const decodedToken = JSON.parse(jsonPayload);
+                
+                // Afficher le résultat
+                document.getElementById('output').textContent = JSON.stringify(decodedToken, null, 2);
+                
+                console.log('Token décodé:', decodedToken);
+            } catch (error) {
+                document.getElementById('output').textContent = 'Erreur: ' + error.message;
+            }
+        }
+
+        // Test automatique avec le token du localStorage si disponible
+        window.onload = function() {
+            const storedToken = localStorage.getItem('token');
+            if (storedToken) {
+                document.getElementById('tokenInput').value = storedToken;
+                console.log('Token trouvé dans localStorage');
+                decodeToken();
+            }
+        };
+    </script>
+</body>
+</html> 

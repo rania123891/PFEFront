@@ -1,178 +1,269 @@
-<div class="messages-container">
-  <!-- Liste des conversations -->
-  <div class="conversations-list">
-    <nb-card>
-      <nb-card-header>
-        <div class="header-content">
-          <h5>Messages</h5>
-          <nb-actions size="small">
-            <nb-action icon="search-outline"></nb-action>
-            <nb-action icon="plus-outline" (click)="toggleNewMessageForm()"></nb-action>
-          </nb-actions>
+<div class="messaging-container">
+  <!-- Sidebar des conversations -->
+  <div class="conversations-sidebar">
+    <div class="sidebar-header">
+      <div class="user-profile">
+        <div class="user-avatar">
+          <div class="avatar-circle">
+            {{ getUserInitials(utilisateurConnecte) }}
+          </div>
+          <div class="online-indicator"></div>
         </div>
-      </nb-card-header>
+        <div class="user-info">
+          <h4>{{ utilisateurConnecte?.prenom }} {{ utilisateurConnecte?.nom }}</h4>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button nbButton 
+                ghost 
+                shape="round" 
+                size="small" 
+                (click)="toggleNewMessageForm()"
+                nbTooltip="Nouveau message"
+                class="action-btn">
+          <nb-icon icon="plus-outline"></nb-icon>
+        </button>
+      </div>
+    </div>
 
-      <div *ngIf="isLoading" class="loading-indicator">
+    <!-- Zone de recherche pour nouveau message -->
+    <div class="search-section" *ngIf="showNewMessageForm">
+      <div class="search-header">
+        <h6><nb-icon icon="edit-outline" class="me-2"></nb-icon>Nouveau message</h6>
+      </div>
+      <div class="search-input-container">
+        <nb-icon icon="search-outline" class="search-icon"></nb-icon>
+        <input nbInput
+               fullWidth
+               placeholder="Rechercher un utilisateur..."
+               [(ngModel)]="searchTerm"
+               (ngModelChange)="filterUsers($event)"
+               [ngModelOptions]="{standalone: true}"
+               class="search-input">
+      </div>
+      
+      <div class="users-list" *ngIf="filteredUsers.length > 0">
+        <div *ngFor="let user of filteredUsers" 
+             class="user-item" 
+             (click)="selectUser(user)">
+          <div class="user-avatar-sm">
+            {{ getUserInitials(user) }}
+          </div>
+          <div class="user-details">
+            <div class="user-name">{{ user.prenom }} {{ user.nom }}</div>
+            <div class="user-email">{{ user.email }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Liste des conversations -->
+    <div class="conversations-list">
+      <div class="section-title" *ngIf="!showNewMessageForm">
+        <span>Conversations récentes</span>
+      </div>
+
+      <div *ngIf="isLoading" class="loading-container">
         <nb-spinner size="medium"></nb-spinner>
-        <span>Chargement des messages...</span>
+        <span>Chargement des conversations...</span>
       </div>
 
-      <!-- Formulaire de nouvelle conversation -->
-      <div class="new-message-form" *ngIf="showNewMessageForm">
-        <div class="search-user-container">
-          <input nbInput
-                 fullWidth
-                 type="text"
-                 placeholder="Rechercher un utilisateur..."
-                 [(ngModel)]="searchTerm"
-                 (ngModelChange)="filterUsers($event)"
-                 [ngModelOptions]="{standalone: true}">
-          
-          <div class="users-list" *ngIf="filteredUsers.length > 0">
-            <div class="user-item" *ngFor="let user of filteredUsers" (click)="selectUser(user)">
-              <nb-user [name]="user.prenom + ' ' + user.nom"
-                      [title]="user.email"
-                      [picture]="user.profilePicture"
-                      size="medium">
-              </nb-user>
-            </div>
-          </div>
+      <div *ngIf="!isLoading && conversations.length === 0 && !showNewMessageForm" 
+           class="empty-conversations">
+        <div class="empty-icon">
+          <nb-icon icon="message-circle-outline"></nb-icon>
         </div>
+        <h6>Aucune conversation</h6>
+        <p>Commencez une nouvelle conversation</p>
+        <button nbButton status="primary" (click)="toggleNewMessageForm()">
+          <nb-icon icon="plus-outline" class="me-2"></nb-icon>
+          Nouveau message
+        </button>
       </div>
 
-      <nb-list [class.hidden]="isLoading">
-        <nb-list-item *ngFor="let conversation of conversations" 
-                      [class.active]="conversation.id === selectedConversation?.id"
-                      (click)="selectConversation(conversation)">
-          <div class="conversation-item">
-            <div class="custom-user-avatar">
-              <img [src]="getUserProfilePicture(conversation.otherUserId)" 
-                   [alt]="conversation.otherUserName"
-                   (error)="onImageError($event)"
-                   class="avatar-image">
-              <div class="user-info">
-                <span class="user-name">{{ conversation.otherUserName }}</span>
-              </div>
-            </div>
-            <div class="conversation-preview">
-              <div class="message-preview" [class.unread]="conversation.unreadCount > 0">
-                {{ conversation.lastMessage?.contenu }}
-              </div>
-              <div class="message-info">
-                <span class="message-time">
-                  {{ conversation.lastMessage?.envoyeLe | date:'shortTime' }}
-                </span>
-                <span class="unread-count" *ngIf="conversation.unreadCount > 0">
-                  {{ conversation.unreadCount }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </nb-list-item>
+      <div *ngFor="let conversation of conversations" 
+           class="conversation-card"
+           [class.active]="conversation.id === selectedConversation?.id"
+           [class.unread]="conversation.unreadCount > 0"
+           (click)="selectConversation(conversation)">
         
-        <div *ngIf="!isLoading && conversations.length === 0" class="no-messages">
-          <p>Aucune conversation</p>
-          <button nbButton status="primary" (click)="toggleNewMessageForm()">
-            Nouveau message
-          </button>
+        <div class="conversation-avatar">
+          <div class="avatar-circle">
+            {{ conversation.otherUserInitials }}
+          </div>
+          <div class="online-status" *ngIf="conversation.isOnline"></div>
         </div>
-      </nb-list>
-    </nb-card>
+        
+        <div class="conversation-content">
+          <div class="conversation-header">
+            <div class="contact-name">{{ conversation.otherUserName }}</div>
+            <div class="conversation-time">{{ getTimeDisplay(conversation.lastMessageTime) }}</div>
+          </div>
+          <div class="conversation-preview">
+            <div class="last-message">
+              <span *ngIf="conversation.lastMessage?.expediteurId === utilisateurConnecte?.id" class="you-indicator">Vous: </span>
+              {{ conversation.lastMessage?.contenu }}
+            </div>
+            <div class="conversation-indicators">
+              <span *ngIf="conversation.unreadCount > 0" class="unread-count">
+                {{ conversation.unreadCount }}
+              </span>
+              <nb-icon *ngIf="conversation.lastMessage?.expediteurId === utilisateurConnecte?.id"
+                      [icon]="conversation.lastMessage?.lu ? 'checkmark-done-outline' : 'checkmark-outline'"
+                      [class.read]="conversation.lastMessage?.lu"
+                      class="message-status">
+              </nb-icon>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- Zone de conversation -->
-  <div class="conversation-area">
-    <nb-card>
-      <nb-card-header *ngIf="selectedConversation || showNewMessageForm">
-        <div class="conversation-header">
-          <div class="custom-user-avatar" *ngIf="selectedConversation">
-            <img [src]="getUserProfilePicture(selectedConversation.otherUserId)" 
-                 [alt]="selectedConversation.otherUserName"
-                 (error)="onImageError($event)"
-                 class="avatar-image">
-            <div class="user-info">
-              <span class="user-name">{{ selectedConversation.otherUserName }}</span>
-            </div>
+  <!-- Zone de chat principale -->
+  <div class="chat-area">
+    <!-- En-tête du chat -->
+    <div class="chat-header" *ngIf="selectedConversation || showNewMessageForm">
+      <div class="chat-contact" *ngIf="selectedConversation">
+        <div class="contact-avatar">
+          <div class="avatar-circle">
+            {{ selectedConversation.otherUserInitials }}
           </div>
-          <span *ngIf="showNewMessageForm">✨ Nouveau message</span>
-          <div class="status-indicator" *ngIf="selectedConversation"></div>
+          <div class="online-status" *ngIf="selectedConversation.isOnline"></div>
         </div>
-      </nb-card-header>
+        <div class="contact-info">
+          <h5>{{ selectedConversation.otherUserName }}</h5>
+        </div>
+      </div>
       
-      <nb-card-body>
-        <div class="messages-list" #messagesList>
-          <div *ngIf="isLoading" class="loading-indicator">
-            <nb-spinner size="medium"></nb-spinner>
-            <span>Chargement des messages...</span>
-          </div>
+      <div class="new-chat-header" *ngIf="showNewMessageForm">
+        <div class="new-chat-icon">
+          <nb-icon icon="edit-outline"></nb-icon>
+        </div>
+        <div class="new-chat-info">
+          <h5>Nouveau message</h5>
+          <span class="new-chat-subtitle">Envoyez un message à un utilisateur</span>
+        </div>
+      </div>
 
-          <ng-container *ngIf="!isLoading">
-            <ng-container *ngIf="selectedConversation">
-              <div class="messages-date-group" *ngFor="let group of getMessageGroups()">
-                <div class="date-separator">
-                  {{ group.date | date:'mediumDate' }}
-                </div>
-                <div *ngFor="let message of group.messages" 
-                     class="message-bubble"
-                     [class.sent]="message.expediteurId === utilisateurConnecte?.id"
-                     [class.received]="message.expediteurId !== utilisateurConnecte?.id">
-                  <div class="message-content">
-                    {{ message.contenu }}
-                  </div>
-                  <div class="message-info">
-                    <span class="message-time">
-                      {{ message.envoyeLe | date:'shortTime' }}
-                    </span>
-                    <span class="message-status" *ngIf="message.expediteurId === utilisateurConnecte?.id">
-                      <nb-icon [icon]="message.lu ? 'checkmark-done-outline' : 'checkmark-outline'"
-                              [status]="message.lu ? 'success' : 'basic'"
-                              size="tiny">
-                      </nb-icon>
-                    </span>
-                  </div>
-                </div>
+      <div class="chat-actions">
+        <button nbButton ghost shape="round" size="small" nbTooltip="Plus d'options">
+          <nb-icon icon="more-horizontal-outline"></nb-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Zone de bienvenue -->
+    <div *ngIf="!selectedConversation && !showNewMessageForm" class="welcome-area">
+      <div class="welcome-content">
+        <div class="welcome-icon">
+          <nb-icon icon="message-circle-outline"></nb-icon>
+        </div>
+        <h3>Bienvenue dans votre messagerie</h3>
+        <p>Sélectionnez une conversation ou créez-en une nouvelle pour commencer à discuter</p>
+        <button nbButton status="primary" size="large" (click)="toggleNewMessageForm()">
+          <nb-icon icon="plus-outline" class="me-2"></nb-icon>
+          Commencer une conversation
+        </button>
+      </div>
+    </div>
+
+    <!-- Zone des messages -->
+    <div class="messages-area" 
+         *ngIf="selectedConversation"
+         #messagesList>
+      
+      <div class="messages-container">
+        <div *ngFor="let group of messageGroups" class="message-group">
+          <div class="date-separator">
+            <span class="date-text">{{ group.date | date:'fullDate':'':'fr-FR' }}</span>
+          </div>
+          
+          <div *ngFor="let message of group.messages" 
+               class="message-wrapper"
+               [class.sent]="isMessageSent(message)"
+               [class.received]="!isMessageSent(message)">
+            
+            <div class="message-bubble"
+                 [class.message-sent]="isMessageSent(message)"
+                 [class.message-received]="!isMessageSent(message)">
+              
+              <div class="message-content">
+                {{ message.contenu }}
               </div>
               
-              <div *ngIf="selectedConversation.messages.length === 0" class="no-messages">
-                <p>Aucun message dans cette conversation</p>
+              <div class="message-meta">
+                <span class="message-time">{{ message.envoyeLe | date:'shortTime' }}</span>
+                <div class="message-status" *ngIf="isMessageSent(message)">
+                  <nb-icon [icon]="message.lu ? 'checkmark-done-outline' : 'checkmark-outline'"
+                          [class.delivered]="!message.lu"
+                          [class.read]="message.lu">
+                  </nb-icon>
+                </div>
               </div>
-            </ng-container>
-            
-            <div *ngIf="!selectedConversation && !showNewMessageForm" class="no-conversation-selected">
-              Sélectionnez une conversation pour voir les messages
             </div>
-          </ng-container>
+            
+            <div class="message-avatar" *ngIf="!isMessageSent(message)">
+              <div class="avatar-sm">
+                {{ selectedConversation.otherUserInitials }}
+              </div>
+            </div>
+          </div>
         </div>
-      </nb-card-body>
+      </div>
+    </div>
 
-      <nb-card-footer *ngIf="selectedConversation || showNewMessageForm">
-        <form [formGroup]="messageForm" (ngSubmit)="envoyerMessage()" class="message-input-form">
+    <!-- Zone de saisie -->
+    <div class="message-input-area" *ngIf="selectedConversation || showNewMessageForm">
+      <form [formGroup]="messageForm" (ngSubmit)="envoyerMessage()" class="message-form">
+        
+        <!-- Champ destinataire pour nouveau message -->
+        <div class="recipient-section" *ngIf="showNewMessageForm">
+          <div class="recipient-label">
+            <nb-icon icon="person-outline" class="me-2"></nb-icon>
+            Destinataire
+          </div>
           <input nbInput
-                 *ngIf="showNewMessageForm"
                  fullWidth
-                 type="email"
                  formControlName="emailDestinataire"
                  placeholder="Email du destinataire"
-                 [status]="messageForm.get('emailDestinataire')?.invalid && 
-                          messageForm.get('emailDestinataire')?.touched ? 'danger' : 'basic'">
+                 type="email"
+                 class="recipient-input">
+        </div>
+        
+        <!-- Zone de saisie du message -->
+        <div class="input-container">
+          <button nbButton 
+                  ghost 
+                  shape="round" 
+                  size="small" 
+                  type="button"
+                  class="attachment-btn"
+                  nbTooltip="Joindre un fichier">
+            <nb-icon icon="attach-outline"></nb-icon>
+          </button>
           
-          <div class="message-input-container">
+          <div class="text-input-wrapper">
             <textarea nbInput
-                    fullWidth
-                    formControlName="contenu"
-                    placeholder="Écrivez votre message..."
-                    [status]="messageForm.get('contenu')?.invalid && 
-                             messageForm.get('contenu')?.touched ? 'danger' : 'basic'"
-                    (keyup.enter)="$event.shiftKey || envoyerMessage()"></textarea>
-            <button nbButton
-                    status="primary"
-                    [disabled]="messageForm.invalid || isLoading"
-                    type="submit">
-              <nb-icon icon="paper-plane-outline"></nb-icon>
-            </button>
+                     formControlName="contenu"
+                     placeholder="Tapez votre message..."
+                     rows="1"
+                     class="message-textarea"
+                     (keydown)="handleEnterKey($event)"></textarea>
           </div>
-        </form>
-      </nb-card-footer>
-    </nb-card>
+          
+          <button nbButton
+                  status="primary"
+                  shape="round"
+                  size="small"
+                  type="submit"
+                  [disabled]="!messageForm.valid || isLoading"
+                  class="send-btn"
+                  nbTooltip="Envoyer le message">
+            <nb-icon icon="paper-plane-outline"></nb-icon>
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 </div> 

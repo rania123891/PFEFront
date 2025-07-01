@@ -1,3 +1,22 @@
+<!-- Bouton de test temporaire -->
+<div class="row test-section" style="margin-bottom: 1rem;">
+  <div class="col-12">
+    <nb-card>
+      <nb-card-body>
+        <button nbButton status="primary" (click)="refreshStats()">
+          🔄 Actualiser les statistiques
+        </button>
+        <span *ngIf="lastUpdate" style="margin-left: 1rem; color: #8f9bb3;">
+          Dernière mise à jour: {{ lastUpdate | date:'short' }}
+        </span>
+        <span *ngIf="error" style="margin-left: 1rem; color: #ff6b6b;">
+          Erreur: {{ error }}
+        </span>
+      </nb-card-body>
+    </nb-card>
+  </div>
+</div>
+
 <!-- Statistiques principales -->
 <div class="row stats-overview">
   <div class="col-lg-3 col-md-6">
@@ -40,12 +59,12 @@
 
 <!-- Graphiques et analyses -->
 <div class="row charts-section">
-  <!-- Répartition des tâches par statut -->
+  <!-- Répartition des tâches par priorité -->
   <div class="col-lg-6 col-md-12">
-    <ngx-task-status-chart 
-      [data]="statistiques?.tachesParStatut"
+    <ngx-task-priority-chart 
+      [data]="statistiques?.tachesParPriorite"
       [isLoading]="loading">
-    </ngx-task-status-chart>
+    </ngx-task-priority-chart>
   </div>
   
   <!-- Projets créés par mois -->

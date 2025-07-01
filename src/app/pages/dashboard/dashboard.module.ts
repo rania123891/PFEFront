@@ -19,6 +19,7 @@ import { DashboardComponent } from './dashboard.component';
 // Nouveaux composants
 import { OverviewCardComponent } from './overview-card/overview-card.component';
 import { TaskStatusChartComponent } from './task-status-chart/task-status-chart.component';
+import { TaskPriorityChartComponent } from './task-priority-chart/task-priority-chart.component';
 import { ProjectsTrendChartComponent } from './projects-trend-chart/projects-trend-chart.component';
 import { PlanningChartComponent } from './planning-chart/planning-chart.component';
 import { RecentActivityComponent } from './recent-activity/recent-activity.component';
@@ -75,6 +76,7 @@ import { EquipeService } from '../../services/equipe.service';
     // Nouveaux composants
     OverviewCardComponent,
     TaskStatusChartComponent,
+    TaskPriorityChartComponent,
     ProjectsTrendChartComponent,
     PlanningChartComponent,
     RecentActivityComponent,

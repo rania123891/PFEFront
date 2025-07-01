@@ -28,11 +28,16 @@ export class DashboardService {
   private initializeRealTimeUpdates() {
     // Actualiser les données toutes les 5 minutes
     const updateInterval = interval(5 * 60 * 1000).pipe(startWith(0));
+    console.log('🚀 Initialisation des mises à jour automatiques du dashboard');
 
     updateInterval.pipe(
-      switchMap(() => this.loadAllData())
+      switchMap(() => {
+        console.log('🔄 Chargement des données dashboard...');
+        return this.loadAllData();
+      })
     ).subscribe({
       next: (statistiques) => {
+        console.log('✅ Données dashboard chargées avec succès:', statistiques);
         this.dataSubject.next({
           statistiques,
           lastUpdate: new Date(),
@@ -40,7 +45,7 @@ export class DashboardService {
         });
       },
       error: (error) => {
-        console.error('Erreur lors du chargement des données dashboard:', error);
+        console.error('❌ Erreur lors du chargement des données dashboard:', error);
         this.dataSubject.next({
           statistiques: null,
           lastUpdate: new Date(),
@@ -66,6 +71,11 @@ export class DashboardService {
             'Terminé': 8,
             'En attente': 5,
             'En retard': 3
+          },
+          tachesParPriorite: {
+            'Faible': 8,
+            'Moyenne': 15,
+            'Élevée': 5
           },
           projetsParMois: [
             { mois: '01/2024', count: 3 },

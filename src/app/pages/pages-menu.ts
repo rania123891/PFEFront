@@ -51,6 +51,11 @@ export const MENU_ITEMS: NbMenuItem[] = [
     link: '/pages/planification',
   },
   {
+    title: 'Chronologie',
+    icon: 'clock-outline',
+    link: '/pages/chronologie',
+  },
+  {
     group: true,
     title: 'AI ASSISTANT',
   },
@@ -58,11 +63,6 @@ export const MENU_ITEMS: NbMenuItem[] = [
     title: 'Assistant',
     icon: 'bulb-outline',
     link: '/pages/assistant',
-  },
-  {
-    title: 'Prédictions IA',
-    icon: 'trending-up-outline',
-    link: '/pages/predictions',
   },
   {
     group: true,
@@ -73,4 +73,11 @@ export const MENU_ITEMS: NbMenuItem[] = [
     icon: 'bar-chart-2-outline',
     link: '/pages/statistique',
   },
+  {
+    title: 'Prédictions',
+    icon: 'trending-up',
+    link: '/pages/predictions',
+  }
+  
+
 ]; 

@@ -18,6 +18,12 @@ export class StatistiqueComponent implements OnInit, OnDestroy {
   totalUtilisateurs = 0;
   totalEquipes = 0;
   
+  // Données pour les graphiques
+  tachesParPriorite: { [key: string]: number } = {};
+  projetsParMois: { mois: string; count: number }[] = [];
+  planificationsParJour: { jour: string; count: number }[] = [];
+  progressionProjets: { nom: string; progression: number }[] = [];
+  
   loading = true;
   currentDate = new Date();
   
@@ -46,7 +52,11 @@ export class StatistiqueComponent implements OnInit, OnDestroy {
       totalProjets: this.statistiqueService.getTotalProjets(),
       totalTaches: this.statistiqueService.getTotalTaches(),
       totalUtilisateurs: this.statistiqueService.getTotalUtilisateurs(),
-      totalEquipes: this.statistiqueService.getTotalEquipes()
+      totalEquipes: this.statistiqueService.getTotalEquipes(),
+      tachesParPriorite: this.statistiqueService.getTachesParPriorite(),
+      projetsParMois: this.statistiqueService.getProjetsParMois(),
+      planificationsParJour: this.statistiqueService.getPlanificationsParJour(),
+      progressionProjets: this.statistiqueService.getProgressionProjets()
     }).pipe(
       takeUntil(this.destroy$)
     ).subscribe({
@@ -55,6 +65,10 @@ export class StatistiqueComponent implements OnInit, OnDestroy {
         this.totalTaches = data.totalTaches;
         this.totalUtilisateurs = data.totalUtilisateurs;
         this.totalEquipes = data.totalEquipes;
+        this.tachesParPriorite = data.tachesParPriorite;
+        this.projetsParMois = data.projetsParMois;
+        this.planificationsParJour = data.planificationsParJour;
+        this.progressionProjets = data.progressionProjets;
         
         this.setupCharts();
         this.loading = false;
@@ -73,6 +87,35 @@ export class StatistiqueComponent implements OnInit, OnDestroy {
     this.totalTaches = 45;
     this.totalUtilisateurs = 12;
     this.totalEquipes = 5;
+    this.tachesParPriorite = {
+      'Faible': 12,
+      'Moyenne': 20,
+      'Élevée': 13
+    };
+    this.projetsParMois = [
+      { mois: 'Jan', count: 2 },
+      { mois: 'Fév', count: 5 },
+      { mois: 'Mar', count: 3 },
+      { mois: 'Avr', count: 8 },
+      { mois: 'Mai', count: 4 },
+      { mois: 'Jun', count: 6 }
+    ];
+    this.planificationsParJour = [
+      { jour: 'Lun', count: 12 },
+      { jour: 'Mar', count: 13 },
+      { jour: 'Mer', count: 10 },
+      { jour: 'Jeu', count: 13 },
+      { jour: 'Ven', count: 9 },
+      { jour: 'Sam', count: 23 },
+      { jour: 'Dim', count: 21 }
+    ];
+    this.progressionProjets = [
+      { nom: 'Projet E-commerce', progression: 85 },
+      { nom: 'App Mobile', progression: 73 },
+      { nom: 'Site Web', progression: 95 },
+      { nom: 'API REST', progression: 60 },
+      { nom: 'Dashboard', progression: 40 }
+    ];
     this.setupCharts();
   }
 
@@ -84,9 +127,32 @@ export class StatistiqueComponent implements OnInit, OnDestroy {
   }
 
   private setupPieChart(): void {
+    // Convertir les données de priorité en format pour le graphique
+    const chartData = Object.entries(this.tachesParPriorite).map(([priorite, count]) => {
+      let color = '#8f9bb3'; // couleur par défaut
+      
+      switch (priorite) {
+        case 'Élevée':
+          color = '#FF3D71'; // Rouge pour priorité élevée
+          break;
+        case 'Moyenne':
+          color = '#FFAA00'; // Orange pour priorité moyenne
+          break;
+        case 'Faible':
+          color = '#00D68F'; // Vert pour priorité faible
+          break;
+      }
+      
+      return {
+        value: count,
+        name: priorite,
+        itemStyle: { color }
+      };
+    });
+
     this.pieChartOption = {
       title: {
-        text: 'Répartition des Tâches par Statut',
+        text: 'Répartition des Tâches par Priorité',
         left: 'center',
         textStyle: {
           color: '#8f9bb3'
@@ -122,17 +188,17 @@ export class StatistiqueComponent implements OnInit, OnDestroy {
           labelLine: {
             show: false
           },
-          data: [
-            { value: Math.ceil(this.totalTaches * 0.3), name: 'En cours', itemStyle: { color: '#3366FF' } },
-            { value: Math.ceil(this.totalTaches * 0.5), name: 'Terminées', itemStyle: { color: '#00D68F' } },
-            { value: Math.ceil(this.totalTaches * 0.2), name: 'En attente', itemStyle: { color: '#FFAA00' } }
-          ]
+          data: chartData
         }
       ]
     };
   }
 
   private setupBarChart(): void {
+    // Extraire les données réelles des projets par mois
+    const moisLabels = this.projetsParMois.map(item => item.mois);
+    const projetsData = this.projetsParMois.map(item => item.count);
+
     this.barChartOption = {
       title: {
         text: 'Projets créés par mois',
@@ -145,6 +211,10 @@ export class StatistiqueComponent implements OnInit, OnDestroy {
         trigger: 'axis',
         axisPointer: {
           type: 'shadow'
+        },
+        formatter: function (params: any) {
+          const data = params[0];
+          return `${data.name}<br/>${data.seriesName}: ${data.value} projet${data.value > 1 ? 's' : ''}`;
         }
       },
       grid: {
@@ -156,7 +226,7 @@ export class StatistiqueComponent implements OnInit, OnDestroy {
       xAxis: [
         {
           type: 'category',
-          data: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun'],
+          data: moisLabels,
           axisLabel: {
             color: '#8f9bb3'
           }
@@ -167,7 +237,8 @@ export class StatistiqueComponent implements OnInit, OnDestroy {
           type: 'value',
           axisLabel: {
             color: '#8f9bb3'
-          }
+          },
+          minInterval: 1 // Assurer que l'axe Y affiche des nombres entiers
         }
       ],
       series: [
@@ -175,7 +246,7 @@ export class StatistiqueComponent implements OnInit, OnDestroy {
           name: 'Projets',
           type: 'bar',
           barWidth: '60%',
-          data: [2, 5, 3, 8, 4, 6],
+          data: projetsData,
           itemStyle: {
             color: '#3366FF'
           }
@@ -185,6 +256,10 @@ export class StatistiqueComponent implements OnInit, OnDestroy {
   }
 
   private setupLineChart(): void {
+    // Extraire les données réelles des planifications par jour
+    const joursLabels = this.planificationsParJour.map(item => item.jour);
+    const planificationsData = this.planificationsParJour.map(item => item.count);
+
     this.lineChartOption = {
       title: {
         text: 'Planifications par jour',
@@ -193,7 +268,11 @@ export class StatistiqueComponent implements OnInit, OnDestroy {
         }
       },
       tooltip: {
-        trigger: 'axis'
+        trigger: 'axis',
+        formatter: function (params: any) {
+          const data = params[0];
+          return `${data.name}<br/>${data.seriesName}: ${data.value} planification${data.value > 1 ? 's' : ''}`;
+        }
       },
       grid: {
         left: '3%',
@@ -204,7 +283,7 @@ export class StatistiqueComponent implements OnInit, OnDestroy {
       xAxis: {
         type: 'category',
         boundaryGap: false,
-        data: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
+        data: joursLabels,
         axisLabel: {
           color: '#8f9bb3'
         }
@@ -213,14 +292,15 @@ export class StatistiqueComponent implements OnInit, OnDestroy {
         type: 'value',
         axisLabel: {
           color: '#8f9bb3'
-        }
+        },
+        minInterval: 1 // Assurer que l'axe Y affiche des nombres entiers
       },
       series: [
         {
           name: 'Planifications',
           type: 'line',
           stack: 'Total',
-          data: [12, 13, 10, 13, 9, 23, 21],
+          data: planificationsData,
           itemStyle: {
             color: '#00D68F'
           },
@@ -244,6 +324,10 @@ export class StatistiqueComponent implements OnInit, OnDestroy {
   }
 
   private setupProgressChart(): void {
+    // Extraire les données réelles de progression des projets
+    const nomsProjet = this.progressionProjets.map(item => item.nom);
+    const progressionsData = this.progressionProjets.map(item => item.progression);
+
     this.progressChartOption = {
       title: {
         text: 'Progression des Projets',
@@ -255,6 +339,10 @@ export class StatistiqueComponent implements OnInit, OnDestroy {
         trigger: 'axis',
         axisPointer: {
           type: 'shadow'
+        },
+        formatter: function (params: any) {
+          const data = params[0];
+          return `${data.name}<br/>${data.seriesName}: ${data.value}%`;
         }
       },
       grid: {
@@ -273,7 +361,7 @@ export class StatistiqueComponent implements OnInit, OnDestroy {
       },
       yAxis: {
         type: 'category',
-        data: ['Projet E-commerce', 'App Mobile', 'Site Web', 'API REST', 'Dashboard'],
+        data: nomsProjet,
         axisLabel: {
           color: '#8f9bb3'
         }
@@ -282,11 +370,16 @@ export class StatistiqueComponent implements OnInit, OnDestroy {
         {
           name: 'Progression',
           type: 'bar',
-          data: [85, 73, 95, 60, 40],
+          data: progressionsData,
           itemStyle: {
             color: function(params: any) {
-              const colors = ['#FF3D71', '#FFAA00', '#00D68F', '#3366FF', '#8A2BE2'];
-              return colors[params.dataIndex];
+              // Couleur basée sur le pourcentage de progression
+              const progression = params.value;
+              if (progression >= 90) return '#00D68F'; // Vert pour très avancé
+              if (progression >= 70) return '#3366FF'; // Bleu pour bien avancé
+              if (progression >= 50) return '#FFAA00'; // Orange pour moyennement avancé
+              if (progression >= 30) return '#FF9F43'; // Orange foncé pour peu avancé
+              return '#FF3D71'; // Rouge pour très peu avancé
             }
           }
         }

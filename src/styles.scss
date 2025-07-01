@@ -1,6 +1,9 @@
 /* Styles globaux */
 @import 'themes';
 
+/* Import des styles dhtmlx-gantt */
+@import '~dhtmlx-gantt/codebase/dhtmlxgantt.css';
+
 /* Styles Frappe Gantt inlinés */
 .gantt .grid-background {
   fill: none;

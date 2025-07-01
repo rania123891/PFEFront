@@ -1,5 +1,4 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MembreEquipeService, MembreEquipe, RoleMembreEquipe } from '../../../services/membre-equipe.service';
 import { EquipeService } from '../../../services/equipe.service';
 import { UtilisateurService, Utilisateur } from '../../../services/utilisateur.service';
@@ -15,23 +14,17 @@ export class MembresEquipeComponent implements OnInit {
   equipes: any[] = [];
   utilisateurs: Utilisateur[] = [];
   isLoading = false;
-  showAddForm = false;
-  membreForm: FormGroup;
   selectedEquipeId: number | null = null;
+  selectedUtilisateurIds: number[] = [];
+  selectedRole: RoleMembreEquipe = RoleMembreEquipe.Membre;
   roleMembreEquipe = RoleMembreEquipe;
 
   constructor(
     private membreEquipeService: MembreEquipeService,
     private equipeService: EquipeService,
     private utilisateurService: UtilisateurService,
-    private fb: FormBuilder,
     private toastrService: NbToastrService
   ) {
-    this.membreForm = this.fb.group({
-      utilisateurId: ['', Validators.required],
-      role: [RoleMembreEquipe.Membre, Validators.required],
-      equipeId: ['', Validators.required]
-    });
   }
 
   ngOnInit(): void {
@@ -73,7 +66,7 @@ export class MembresEquipeComponent implements OnInit {
   }
 
   loadEquipes(): void {
-    this.equipeService.getEquipes().subscribe({
+    this.equipeService.getEquipesForCrud().subscribe({
       next: (data) => {
         console.log('Équipes chargées:', data);
         this.equipes = data;
@@ -95,8 +88,18 @@ export class MembresEquipeComponent implements OnInit {
     console.log('selectedEquipeId dans loadMembres:', this.selectedEquipeId);
     this.membreEquipeService.getMembresEquipe(equipeId).subscribe({
       next: (data) => {
-        this.membres = data;
-        this.isLoading = false;
+        console.log('Membres reçus du serveur:', data);
+        console.log('Premier membre (s\'il existe):', data[0]);
+        
+        // Si les données liées ne sont pas disponibles, les enrichir
+        if (data.length > 0 && !data[0].utilisateur) {
+          console.log('Données liées manquantes, enrichissement en cours...');
+          this.enrichirDonneesMembres(data);
+        } else {
+          this.membres = data;
+          this.isLoading = false;
+        }
+        
         console.log('Membres chargés, selectedEquipeId:', this.selectedEquipeId);
       },
       error: (error) => {
@@ -110,72 +113,65 @@ export class MembresEquipeComponent implements OnInit {
     });
   }
 
+  private enrichirDonneesMembres(membres: MembreEquipe[]): void {
+    // Pour chaque membre, on enrichit avec les données utilisateur et équipe
+    membres.forEach(membre => {
+      // Trouver l'utilisateur correspondant
+      const utilisateur = this.utilisateurs.find(u => u.id === membre.utilisateurId);
+      if (utilisateur) {
+        membre.utilisateur = {
+          id: utilisateur.id,
+          email: utilisateur.email,
+          nom: utilisateur.nom,
+          prenom: utilisateur.prenom
+        };
+      }
+
+      // Trouver l'équipe correspondante
+      const equipe = this.equipes.find(e => e.idEquipe === membre.equipeId);
+      if (equipe) {
+        membre.equipe = {
+          idEquipe: equipe.idEquipe,
+          nom: equipe.nom
+        };
+      }
+    });
+
+    this.membres = membres;
+    this.isLoading = false;
+    console.log('Données enrichies:', membres);
+  }
+
   onEquipeChange(event: any): void {
-    console.log('Équipe sélectionnée:', event);
-    const equipeId = event;
-    if (equipeId) {
-      this.selectedEquipeId = equipeId;
-      console.log('selectedEquipeId mis à jour:', this.selectedEquipeId);
-      this.loadMembres(equipeId);
-    } else {
-      this.loadAllMembres();
-      this.selectedEquipeId = null;
-    }
-  }
-
-  openAddForm(): void {
-    if (!this.selectedEquipeId) {
-      this.toastrService.warning(
-        'Veuillez sélectionner une équipe d\'abord',
-        'Attention'
-      );
-      return;
-    }
+    console.log('onEquipeChange appelé avec:', event);
+    console.log('Type de event:', typeof event);
     
-    console.log('Ouverture du formulaire d\'ajout');
-    this.showAddForm = true;
-    this.membreForm.patchValue({
-      equipeId: this.selectedEquipeId,
-      role: RoleMembreEquipe.Membre,
-      utilisateurId: null
-    });
-  }
-
-  cancelForm(): void {
-    console.log('Fermeture du formulaire');
-    this.showAddForm = false;
-    this.membreForm.reset({
-      role: RoleMembreEquipe.Membre,
-      utilisateurId: null,
-      equipeId: this.selectedEquipeId
-    });
-  }
-
-  onSubmit(): void {
-    if (this.membreForm.valid && this.selectedEquipeId) {
-      const membreData: MembreEquipe = {
-        utilisateurId: this.membreForm.value.utilisateurId,
-        role: this.membreForm.value.role,
-        equipeId: this.selectedEquipeId,
-        dateAjout: new Date()
-      };
-
-      console.log('Données envoyées:', membreData);
-      this.membreEquipeService.ajouterMembre(this.selectedEquipeId, membreData).subscribe({
-        next: () => {
-          this.toastrService.success('Membre ajouté avec succès', 'Succès');
-          this.loadMembres(this.selectedEquipeId!);
-          this.cancelForm();
-        },
-        error: (error) => {
-          console.error('Erreur lors de l\'ajout du membre:', error);
-          this.toastrService.danger(
-            'Impossible d\'ajouter le membre',
-            'Erreur'
-          );
-        }
-      });
+    if (event && event !== null) {
+      this.selectedEquipeId = Number(event);
+      console.log('selectedEquipeId mis à jour:', this.selectedEquipeId);
+      this.loadMembres(this.selectedEquipeId);
+    } else {
+      this.selectedEquipeId = null;
+      this.membres = [];
+      console.log('selectedEquipeId remis à null');
     }
+  }
+
+  onUtilisateurChange(event: any): void {
+    console.log('onUtilisateurChange appelé avec:', event);
+    if (event && event !== null) {
+      this.selectedUtilisateurIds = Array.isArray(event) ? event.map(Number) : [Number(event)];
+      console.log('selectedUtilisateurIds mis à jour:', this.selectedUtilisateurIds);
+    } else {
+      this.selectedUtilisateurIds = [];
+      console.log('selectedUtilisateurIds remis à null');
+    }
+  }
+
+  onRoleChange(event: any): void {
+    console.log('onRoleChange appelé avec:', event);
+    this.selectedRole = event;
+    console.log('selectedRole mis à jour:', this.selectedRole);
   }
 
   onDelete(membreId: number): void {
@@ -198,5 +194,120 @@ export class MembresEquipeComponent implements OnInit {
 
   getRoleLabel(role: RoleMembreEquipe): string {
     return this.membreEquipeService.getRoleLabel(role);
+  }
+
+  getMembreNomComplet(membre: MembreEquipe): string {
+    if (membre.utilisateur) {
+      const nom = membre.utilisateur.nom || '';
+      const prenom = membre.utilisateur.prenom || '';
+      
+      if (nom && prenom) {
+        return `${prenom} ${nom}`;
+      } else if (nom) {
+        return nom;
+      } else if (prenom) {
+        return prenom;
+      } else if (membre.utilisateur.email) {
+        return membre.utilisateur.email;
+      }
+    }
+    
+    return `Utilisateur ID: ${membre.utilisateurId}`;
+  }
+
+  getUtilisateurNomComplet(utilisateur: any): string {
+    const nom = utilisateur.nom || '';
+    const prenom = utilisateur.prenom || '';
+    
+    if (nom && prenom) {
+      return `${prenom} ${nom}`;
+    } else if (nom) {
+      return nom;
+    } else if (prenom) {
+      return prenom;
+    } else if (utilisateur.email) {
+      return utilisateur.email;
+    }
+    
+    return `Utilisateur ID: ${utilisateur.id}`;
+  }
+
+  getUtilisateursDisponibles(): Utilisateur[] {
+    if (!this.selectedEquipeId) {
+      return this.utilisateurs;
+    }
+
+    // Obtenir les IDs des utilisateurs déjà dans l'équipe
+    const utilisateursDejaAffectes = this.membres.map(membre => membre.utilisateurId);
+    
+    // Filtrer pour retourner seulement les utilisateurs non affectés
+    return this.utilisateurs.filter(utilisateur => 
+      !utilisateursDejaAffectes.includes(utilisateur.id)
+    );
+  }
+
+  ajouterMembres(): void {
+    if (!this.selectedEquipeId || this.selectedUtilisateurIds.length === 0) {
+      this.toastrService.warning(
+        'Veuillez sélectionner une équipe et au moins un utilisateur',
+        'Attention'
+      );
+      return;
+    }
+
+    // Créer un membre pour chaque utilisateur sélectionné
+    const requests = this.selectedUtilisateurIds.map(utilisateurId => {
+      const membreData: MembreEquipe = {
+        utilisateurId,
+        role: this.selectedRole,
+        equipeId: this.selectedEquipeId!,
+        dateAjout: new Date()
+      };
+      return this.membreEquipeService.ajouterMembre(this.selectedEquipeId!, membreData);
+    });
+
+    // Exécuter toutes les requêtes en parallèle
+    console.log('Ajout membres - Nombre de requêtes:', requests.length);
+    
+    // Pour simplifier, on ajoute un par un mais on pourrait utiliser forkJoin
+    let completed = 0;
+    let errors = 0;
+
+    requests.forEach((request, index) => {
+      request.subscribe({
+        next: () => {
+          completed++;
+          if (completed + errors === requests.length) {
+            this.handleAddMembresComplete(completed, errors);
+          }
+        },
+        error: (error) => {
+          console.error(`Erreur lors de l'ajout du membre ${index + 1}:`, error);
+          errors++;
+          if (completed + errors === requests.length) {
+            this.handleAddMembresComplete(completed, errors);
+          }
+        }
+      });
+    });
+  }
+
+  private handleAddMembresComplete(completed: number, errors: number): void {
+    if (errors === 0) {
+      this.toastrService.success(`${completed} membre(s) ajouté(s) avec succès`, 'Succès');
+    } else if (completed > 0) {
+      this.toastrService.warning(`${completed} membre(s) ajouté(s), ${errors} erreur(s)`, 'Partiellement réussi');
+    } else {
+      this.toastrService.danger('Impossible d\'ajouter les membres', 'Erreur');
+    }
+    
+    this.loadMembres(this.selectedEquipeId!);
+    this.resetSelections();
+  }
+
+  resetSelections(): void {
+    this.selectedUtilisateurIds = [];
+    this.selectedRole = RoleMembreEquipe.Membre;
+    console.log('Sélections réinitialisées');
   }
 } 

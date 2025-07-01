@@ -2,6 +2,7 @@ import { RouterModule, Routes } from '@angular/router';
 import { NgModule } from '@angular/core';
 import { PagesComponent } from './pages.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
+import { AdminGuard } from '../auth/admin.guard';
 
 const routes: Routes = [{
   path: '',
@@ -29,26 +30,34 @@ const routes: Routes = [{
       path: 'projets',
       loadChildren: () => import('./projets/projets.module')
         .then(m => m.ProjetsModule),
+      canActivate: [AdminGuard],
     },
     {
       path: 'taches',
       loadChildren: () => import('./taches/taches.module')
         .then(m => m.TachesModule),
+      canActivate: [AdminGuard],
     },
     {
       path: 'equipes',
       loadChildren: () => import('./equipes/equipes.module')
         .then(m => m.EquipesModule),
+      canActivate: [AdminGuard],
     },
     {
       path: 'utilisateurs',
       loadChildren: () => import('./utilisateurs/utilisateurs.module')
         .then(m => m.UtilisateursModule),
+      canActivate: [AdminGuard],
     },
     {
       path: 'planification',
       loadChildren: () => import('./planification/planification.module')
         .then(m => m.PlanificationModule),
+    },
+    {
+      path: 'chronologie',
+      loadChildren: () => import('./chronologie/chronologie.module').then(m => m.ChronologieModule),
     },
     {
       path: 'predictions',

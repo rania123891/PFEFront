@@ -7,6 +7,103 @@
              [(ngModel)]="selectedDate" (ngModelChange)="onDateChange($event)">
       <nb-datepicker #datepicker></nb-datepicker>
     </div>
+    
+    <!-- Interface Admin ou Utilisateur -->
+    <div class="user-info" *ngIf="currentUser">
+      <!-- 👑 Interface Admin -->
+      <div *ngIf="isAdmin" class="admin-interface">
+        <div class="admin-header">
+          <div class="admin-badge">
+            <nb-icon icon="settings-outline"></nb-icon>
+            <span>Mode Administrateur</span>
+          </div>
+          <div class="current-user-info">
+            <span class="current-admin">{{ currentUser.prenom }} {{ currentUser.nom }}</span>
+            <span class="admin-team" *ngIf="currentUserEquipe">
+              <nb-icon icon="people-outline"></nb-icon>
+              {{ currentUserEquipe.nom }}
+            </span>
+          </div>
+        </div>
+        
+        <div class="user-selector">
+          <label>
+            <nb-icon icon="eye-outline"></nb-icon>
+            Consulter les planifications de :
+          </label>
+          <nb-select placeholder="Choisir un utilisateur..." 
+                     [(ngModel)]="selectedUserId" 
+                     (selectedChange)="onUserSelectionChange($event)"
+                     class="user-select-dropdown">
+            <nb-option [value]="currentUser.id" class="my-option">
+              <div class="user-option">
+                <div class="user-avatar">
+                  <nb-icon icon="person-outline"></nb-icon>
+                </div>
+                <div class="user-details">
+                  <span class="user-name">Mes planifications</span>
+                  <span class="user-info-text">{{ currentUser.prenom }} {{ currentUser.nom }}</span>
+                  <span class="user-team" *ngIf="currentUserEquipe">
+                    <nb-icon icon="people-outline"></nb-icon>
+                    {{ currentUserEquipe.nom }}
+                  </span>
+                </div>
+              </div>
+            </nb-option>
+            <nb-option *ngFor="let user of availableUsers" [value]="user.id" class="other-option">
+              <div class="user-option">
+                <div class="user-avatar">
+                  <span class="user-initials">{{ getUserInitials(user) }}</span>
+                </div>
+                <div class="user-details">
+                  <span class="user-name">{{ user.prenom }} {{ user.nom }}</span>
+                  <span class="user-info-text">{{ user.email }}</span>
+                                     <span class="user-team" *ngIf="getUserTeam(user.id)">
+                     <nb-icon icon="people-outline"></nb-icon>
+                     {{ getDisplayTeamName(getUserTeam(user.id)) }}
+                   </span>
+                </div>
+              </div>
+            </nb-option>
+          </nb-select>
+        </div>
+        
+        <div class="viewing-info" *ngIf="selectedUserId && selectedUserId !== currentUser.id">
+          <div class="viewing-card">
+            <div class="viewing-avatar">
+              <span class="avatar-initials">{{ getSelectedUserInitials() }}</span>
+            </div>
+            <div class="viewing-details">
+              <span class="viewing-name">{{ getSelectedUserName() }}</span>
+                             <span class="viewing-team" *ngIf="getSelectedUserTeam()">
+                 <nb-icon icon="people-outline"></nb-icon>
+                 {{ getDisplayTeamName(getSelectedUserTeam()) }}
+               </span>
+            </div>
+            <div class="viewing-badge">
+              <nb-icon icon="eye-outline"></nb-icon>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 👤 Interface Utilisateur Normal -->
+      <div *ngIf="!isAdmin" class="user-interface">
+        <div class="user-card">
+          <div class="user-avatar">
+            <span class="user-initials">{{ getUserInitials(currentUser) }}</span>
+          </div>
+          <div class="user-details">
+            <span class="user-name">{{ currentUser.prenom }} {{ currentUser.nom }}</span>
+            <span class="user-role">Mes planifications</span>
+            <span class="user-team" *ngIf="currentUserEquipe">
+              <nb-icon icon="people-outline"></nb-icon>
+              {{ currentUserEquipe.nom }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Task Planning Form -->
@@ -15,6 +112,7 @@
       <h5 *ngIf="!isEditMode">Nouvelle planification</h5>
       <h5 *ngIf="isEditMode">Modifier la planification</h5>
     </div>
+    
     <div class="form-row">
       <div class="form-group">
         <label>Heure début</label>
@@ -24,19 +122,19 @@
         <label>Heure fin</label>
         <input nbInput type="time" [(ngModel)]="heureFin" placeholder="09:00">
       </div>
+      <div class="form-group task-select">
+        <label>Tâche</label>
+        <nb-select placeholder="Choisir une tâche" [(ngModel)]="selectedTache" (selectedChange)="onTacheChange($event)">
+          <nb-option *ngFor="let tache of taches" [value]="tache.id">
+            {{ tache.titre }}
+          </nb-option>
+        </nb-select>
+      </div>
       <div class="form-group project-select">
         <label>Projet</label>
         <nb-select placeholder="Choisir un projet" [(ngModel)]="selectedProjet" (selectedChange)="onProjetChange($event)">
           <nb-option *ngFor="let projet of projets" [value]="projet.id">
             {{ projet.nom }}
-          </nb-option>
-        </nb-select>
-      </div>
-      <div class="form-group task-select">
-        <label>Tâche</label>
-        <nb-select placeholder="Choisir une tâche" [(ngModel)]="selectedTache" (selectedChange)="onTacheChange($event)" [disabled]="!selectedProjet">
-          <nb-option *ngFor="let tache of taches" [value]="tache.id">
-            {{ tache.titre }}
           </nb-option>
         </nb-select>
       </div>
@@ -86,22 +184,15 @@
               </nb-action>
             </nb-actions>
           </div>
-          <p class="task-description" *ngIf="planification.description">{{ planification.description }}</p>
+          <p class="task-description" *ngIf="getCleanDescription(planification.description)">{{ getCleanDescription(planification.description) }}</p>
           <div class="task-time">
             <nb-icon icon="clock-outline"></nb-icon>
             {{ planification.heureDebut }} - {{ planification.heureFin }}
           </div>
+          
           <div class="task-footer">
             <div class="task-project">
               <span class="project-badge">{{ planification.projet?.nom || 'Projet' }}</span>
-            </div>
-            <!-- Avatar utilisateur assigné -->
-            <div class="task-assignee" *ngIf="planification.tache?.assigneId && getAssignedUser(planification.tache.assigneId) as assignedUser">
-              <div class="user-avatar" 
-                   [style.background-color]="getUserColor(assignedUser.id)"
-                   [title]="assignedUser.prenom + ' ' + assignedUser.nom">
-                {{ getUserInitials(assignedUser) }}
-              </div>
             </div>
           </div>
         </div>
@@ -111,7 +202,7 @@
       </div>
     </div>
 
-    <!-- On Progress Column -->
+    <!-- En Cours Column -->
     <div class="kanban-column progress-column">
       <div class="column-header">
         <h6>En Cours</h6>
@@ -140,22 +231,15 @@
               </nb-action>
             </nb-actions>
           </div>
-          <p class="task-description" *ngIf="planification.description">{{ planification.description }}</p>
+          <p class="task-description" *ngIf="getCleanDescription(planification.description)">{{ getCleanDescription(planification.description) }}</p>
           <div class="task-time">
             <nb-icon icon="clock-outline"></nb-icon>
             {{ planification.heureDebut }} - {{ planification.heureFin }}
           </div>
+          
           <div class="task-footer">
             <div class="task-project">
               <span class="project-badge">{{ planification.projet?.nom || 'Projet' }}</span>
-            </div>
-            <!-- Avatar utilisateur assigné -->
-            <div class="task-assignee" *ngIf="planification.tache?.assigneId && getAssignedUser(planification.tache.assigneId) as assignedUser">
-              <div class="user-avatar" 
-                   [style.background-color]="getUserColor(assignedUser.id)"
-                   [title]="assignedUser.prenom + ' ' + assignedUser.nom">
-                {{ getUserInitials(assignedUser) }}
-              </div>
             </div>
           </div>
         </div>
@@ -194,22 +278,15 @@
               </nb-action>
             </nb-actions>
           </div>
-          <p class="task-description" *ngIf="planification.description">{{ planification.description }}</p>
+          <p class="task-description" *ngIf="getCleanDescription(planification.description)">{{ getCleanDescription(planification.description) }}</p>
           <div class="task-time">
             <nb-icon icon="clock-outline"></nb-icon>
             {{ planification.heureDebut }} - {{ planification.heureFin }}
           </div>
+          
           <div class="task-footer">
             <div class="task-project">
               <span class="project-badge">{{ planification.projet?.nom || 'Projet' }}</span>
-            </div>
-            <!-- Avatar utilisateur assigné -->
-            <div class="task-assignee" *ngIf="planification.tache?.assigneId && getAssignedUser(planification.tache.assigneId) as assignedUser">
-              <div class="user-avatar" 
-                   [style.background-color]="getUserColor(assignedUser.id)"
-                   [title]="assignedUser.prenom + ' ' + assignedUser.nom">
-                {{ getUserInitials(assignedUser) }}
-              </div>
             </div>
           </div>
         </div>
@@ -219,7 +296,7 @@
       </div>
     </div>
 
-    <!-- Done Column -->
+    <!-- Terminé Column -->
     <div class="kanban-column done-column">
       <div class="column-header">
         <h6>Terminé</h6>
@@ -244,22 +321,15 @@
               </nb-action>
             </nb-actions>
           </div>
-          <p class="task-description" *ngIf="planification.description">{{ planification.description }}</p>
+          <p class="task-description" *ngIf="getCleanDescription(planification.description)">{{ getCleanDescription(planification.description) }}</p>
           <div class="task-time">
             <nb-icon icon="clock-outline"></nb-icon>
             {{ planification.heureDebut }} - {{ planification.heureFin }}
           </div>
+          
           <div class="task-footer">
             <div class="task-project">
-              <span class="project-badge completed">{{ planification.projet?.nom || 'Projet' }}</span>
-            </div>
-            <!-- Avatar utilisateur assigné -->
-            <div class="task-assignee" *ngIf="planification.tache?.assigneId && getAssignedUser(planification.tache.assigneId) as assignedUser">
-              <div class="user-avatar" 
-                   [style.background-color]="getUserColor(assignedUser.id)"
-                   [title]="assignedUser.prenom + ' ' + assignedUser.nom">
-                {{ getUserInitials(assignedUser) }}
-              </div>
+              <span class="project-badge">{{ planification.projet?.nom || 'Projet' }}</span>
             </div>
           </div>
         </div>

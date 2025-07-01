@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { ProjetService } from './projet.service';
 import { TacheService } from './tache.service';
 import { PlanificationService, EtatListe, CreatePlanificationDto } from './planification.service';
+import { AuthService } from './auth.service';
 import { Observable, forkJoin, of } from 'rxjs';
 import { map, switchMap, catchError } from 'rxjs/operators';
 
@@ -33,7 +34,8 @@ export class NaturalLanguageService {
   constructor(
     private projetService: ProjetService,
     private tacheService: TacheService,
-    private planificationService: PlanificationService
+    private planificationService: PlanificationService,
+    private authService: AuthService
   ) {}
 
   /**
@@ -125,6 +127,16 @@ export class NaturalLanguageService {
           });
         }
 
+        // Vérifier qu'un utilisateur est connecté
+        const currentUser = this.authService.currentUserValue;
+        if (!currentUser) {
+          return of({
+            success: false,
+            message: 'Aucun utilisateur connecté. Veuillez vous connecter pour créer une planification.',
+            extractedData: extracted
+          });
+        }
+
         // Créer la planification
         const planificationData: CreatePlanificationDto = {
           date: extracted.date!,
@@ -133,7 +145,8 @@ export class NaturalLanguageService {
           description: extracted.description || 'Créé via assistant vocal',
           tacheId: extracted.tacheId!,
           projetId: extracted.projetId!,
-          listeId: extracted.statut || EtatListe.Todo
+          listeId: extracted.statut || EtatListe.Todo,
+          userId: currentUser.id
         };
 
         return this.planificationService.createPlanification(planificationData).pipe(

@@ -164,4 +164,26 @@ export class AuthService {
         })
       );
   }
+
+  isTokenExpired(): boolean {
+    const token = this.getToken();
+    if (!token) return true;
+    
+    try {
+      const decodedToken = this.decodeToken(token);
+      const currentTime = Math.floor(Date.now() / 1000);
+      return decodedToken.exp < currentTime;
+    } catch (error) {
+      return true;
+    }
+  }
+
+  checkTokenAndRedirect(): boolean {
+    if (this.isTokenExpired()) {
+      console.log('🚫 Token expiré, redirection vers login');
+      this.logout();
+      return false;
+    }
+    return true;
+  }
 } 

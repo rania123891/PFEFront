@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { AssistantService } from '../../services/assistant.service';
+import { AssistantService, CommandResponse } from '../../services/assistant.service';
 import { NaturalLanguageService, ProcessingResult } from '../../services/natural-language.service';
 import { NbToastrService } from '@nebular/theme';
 import { trigger, state, style, transition, animate } from '@angular/animations';
@@ -11,6 +11,9 @@ interface CommandHistory {
   status: 'success' | 'error' | 'pending';
   response?: string;
   type?: 'success' | 'error' | 'info' | 'warning';
+  commandType?: string; // Type de commande (Projet, Tache, etc.)
+  confidence?: number; // Niveau de confiance
+  extractedData?: { [key: string]: any }; // Données extraites
 }
 
 declare global {
@@ -63,6 +66,15 @@ export class AssistantComponent implements OnInit, OnDestroy {
   responseType: 'success' | 'error' | 'info' | 'warning' = 'info';
   showResponse: boolean = false;
   isLoading: boolean = false;
+  
+  // Nouvelles propriétés pour l'affichage enrichi
+  currentConfidence: number = 0;
+  currentCommandType: string = '';
+  currentExtractedData: { [key: string]: any } = {};
+  showDetails: boolean = false;
+
+  // Exposer Math au template
+  Math = Math;
 
   constructor(
     private assistantService: AssistantService,
@@ -223,13 +235,30 @@ export class AssistantComponent implements OnInit, OnDestroy {
   }
 
   private isPlanificationCommand(command: string): boolean {
-    const planificationKeywords = [
-      'j\'ai fait', 'j\'ai travaillé', 'j\'ai bossé', 'travail', 'projet', 'tâche', 'tache',
-      'de', 'à', 'heure', 'h', 'description', 'terminé', 'fini', 'en cours', 'progress'
+    const commandLower = command.toLowerCase();
+    
+    // Exclure explicitement les commandes de création
+    const creationKeywords = [
+      'créer un projet', 'nouveau projet', 'ajouter un projet',
+      'créer une tâche', 'nouvelle tâche', 'ajouter une tâche', 'tâche nommée', 'tâche qui s\'appelle',
+      'créer une équipe', 'nouvelle équipe', 'ajouter une équipe',
+      'ajouter un membre', 'nouveau membre', 'membre nommé'
     ];
     
-    const commandLower = command.toLowerCase();
-    return planificationKeywords.some(keyword => commandLower.includes(keyword));
+    // Si c'est une commande de création, ce n'est PAS une planification
+    if (creationKeywords.some(keyword => commandLower.includes(keyword))) {
+      return false;
+    }
+    
+    // Pour être une planification, doit contenir des mots clés de travail ET des horaires
+    const workKeywords = ['j\'ai fait', 'j\'ai travaillé', 'j\'ai bossé', 'travail'];
+    const timeKeywords = ['de', 'à', 'heure', 'h', 'h00', 'h30'];
+    
+    const hasWorkKeyword = workKeywords.some(keyword => commandLower.includes(keyword));
+    const hasTimeKeyword = timeKeywords.some(keyword => commandLower.includes(keyword));
+    
+    // Une vraie planification doit avoir les deux
+    return hasWorkKeyword && hasTimeKeyword;
   }
 
   private processPlanificationCommand(command: string, commandIndex: number) {
@@ -280,33 +309,90 @@ export class AssistantComponent implements OnInit, OnDestroy {
     this.assistantService.sendCommand(command)
       .pipe(finalize(() => this.isLoading = false))
       .subscribe({
-        next: (response: string) => {
+        next: (response: any) => {
           console.log('Réponse reçue:', response);
-          this.responseMessage = response;
-          this.responseType = 'success';
+          
+          // Adapter selon le type de réponse (ancienne string ou nouvelle structure)
+          let processedResponse: CommandResponse;
+          
+          if (typeof response === 'string') {
+            // Ancienne réponse string - on l'adapte
+            processedResponse = {
+              success: true,
+              message: response,
+              type: 'General',
+              confidence: 0,
+              extractedData: {}
+            };
+          } else if (response && typeof response === 'object') {
+            // Nouvelle réponse enrichie
+            processedResponse = {
+              success: response.success ?? true,
+              message: response.message || response,
+              type: response.type || 'General',
+              confidence: response.confidence || 0,
+              extractedData: response.extractedData || {}
+            };
+          } else {
+            // Fallback
+            processedResponse = {
+              success: true,
+              message: 'Commande traitée avec succès',
+              type: 'General',
+              confidence: 0,
+              extractedData: {}
+            };
+          }
+          
+          // Mettre à jour les propriétés d'affichage
+          this.responseMessage = processedResponse.message;
+          this.responseType = processedResponse.success ? 'success' : 'error';
+          this.currentConfidence = processedResponse.confidence;
+          this.currentCommandType = processedResponse.type;
+          this.currentExtractedData = processedResponse.extractedData || {};
           this.showResponse = true;
+          this.showDetails = processedResponse.confidence > 0 || Object.keys(this.currentExtractedData).length > 0;
           
           const index = commandIndex !== -1 ? commandIndex : 0;
-          this.commandHistory[index].status = 'success';
-          this.commandHistory[index].response = response;
-          this.commandHistory[index].type = 'success';
+          this.commandHistory[index].status = processedResponse.success ? 'success' : 'error';
+          this.commandHistory[index].response = processedResponse.message;
+          this.commandHistory[index].type = this.responseType;
+          this.commandHistory[index].commandType = processedResponse.type;
+          this.commandHistory[index].confidence = processedResponse.confidence;
+          this.commandHistory[index].extractedData = processedResponse.extractedData;
           
           localStorage.setItem('commandHistory', JSON.stringify(this.commandHistory));
-          this.toastrService.success('Commande exécutée avec succès', 'Succès');
+          
+          // Messages de notification améliorés
+          if (processedResponse.success) {
+            const confidenceText = processedResponse.confidence > 0 ? ` (Confiance: ${Math.round(processedResponse.confidence)}%)` : '';
+            this.toastrService.success(`${processedResponse.type} exécuté avec succès${confidenceText}`, 'Assistant IA');
+            
+            // Vider le champ de saisie après succès
+            this.userInput = '';
+            this.transcription = '';
+          } else {
+            const confidenceText = processedResponse.confidence > 0 ? ` (Confiance: ${Math.round(processedResponse.confidence)}%)` : '';
+            this.toastrService.warning(`${processedResponse.message}${confidenceText}`, 'Assistant IA');
+          }
         },
-        error: (error: string) => {
+        error: (error: any) => {
           console.error('Erreur détaillée:', error);
-          this.responseMessage = error;
+          this.responseMessage = typeof error === 'string' ? error : (error.message || 'Erreur inconnue');
           this.responseType = 'error';
           this.showResponse = true;
+          this.currentConfidence = 0;
+          this.currentCommandType = 'General';
+          this.currentExtractedData = {};
+          this.showDetails = false;
           
           const index = commandIndex !== -1 ? commandIndex : 0;
           this.commandHistory[index].status = 'error';
-          this.commandHistory[index].response = error;
+          this.commandHistory[index].response = this.responseMessage;
           this.commandHistory[index].type = 'error';
           
           localStorage.setItem('commandHistory', JSON.stringify(this.commandHistory));
-          this.toastrService.danger(error, 'Erreur');
+          this.toastrService.danger(this.responseMessage, 'Erreur');
         }
       });
   }
@@ -333,5 +419,57 @@ export class AssistantComponent implements OnInit, OnDestroy {
       default:
         return 'clock-outline';
     }
+  }
+
+  // Nouvelles méthodes utilitaires
+  getConfidenceColor(): string {
+    if (this.currentConfidence >= 80) return 'success';
+    if (this.currentConfidence >= 60) return 'warning';
+    if (this.currentConfidence >= 40) return 'info';
+    return 'danger';
+  }
+
+  getCommandTypeIcon(type: string): string {
+    switch (type) {
+      case 'Projet':
+        return 'briefcase-outline';
+      case 'Tache':
+        return 'checkmark-square-outline';
+      case 'Equipe':
+        return 'people-outline';
+      case 'Membre':
+        return 'person-add-outline';
+      case 'Planification':
+        return 'calendar-outline';
+      default:
+        return 'question-mark-circle-outline';
+    }
+  }
+
+  getExtractedDataEntries(): Array<{key: string, value: any}> {
+    return Object.entries(this.currentExtractedData).map(([key, value]) => ({
+      key: this.formatKey(key),
+      value: value
+    }));
+  }
+
+  private formatKey(key: string): string {
+    const keyMap: { [key: string]: string } = {
+      'nom': 'Nom',
+      'description': 'Description',
+      'priorite': 'Priorité',
+      'projet': 'Projet',
+      'equipe': 'Équipe',
+      'membre': 'Membre'
+    };
+    return keyMap[key] || key;
+  }
+
+  toggleDetails() {
+    this.showDetails = !this.showDetails;
+  }
+
+  trackByCommand(index: number, item: CommandHistory): string {
+    return item.text + item.timestamp.getTime();
   }
 } 

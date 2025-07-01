@@ -8,7 +8,7 @@
       <nb-card-body>
         <form [formGroup]="tacheForm" (ngSubmit)="onSubmit()">
           <div class="row">
-            <div class="col-md-6">
+            <div class="col-md-4">
               <div class="form-group">
                 <label class="label">Titre *</label>
                 <input
@@ -23,7 +23,23 @@
                 </span>
               </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="label">Équipe *</label>
+                <div *ngIf="equipes.length === 0" style="margin-bottom: 0.5rem; color: #ff9f43; font-size: 0.875rem;">
+                  ⚠️ Aucune équipe disponible ({{equipes.length}} équipes chargées)
+                </div>
+                <nb-select fullWidth formControlName="equipeId" placeholder="Sélectionner une équipe">
+                  <nb-option *ngFor="let equipe of equipes" [value]="equipe.idEquipe">
+                    {{ equipe.nom }}
+                  </nb-option>
+                </nb-select>
+                <span class="error" *ngIf="tacheForm.get('equipeId').touched && tacheForm.get('equipeId').invalid">
+                  L'équipe est requise
+                </span>
+              </div>
+            </div>
+            <div class="col-md-4">
               <div class="form-group">
                 <label class="label">Priorité *</label>
                 <nb-select fullWidth formControlName="priorite">
@@ -33,6 +49,67 @@
                 </nb-select>
               </div>
             </div>
+          </div>
+
+          <!-- 🤖 SECTION PRÉDICTION IA -->
+          <div class="prediction-section" *ngIf="tacheForm.get('titre')?.value && tacheForm.get('titre')?.value.length >= 3">
+            <nb-card accent="info" class="prediction-card">
+              <nb-card-header class="prediction-header">
+                <div class="prediction-title">
+                  <nb-icon icon="flash-outline" class="ai-icon"></nb-icon>
+                  <span>Estimation IA</span>
+                  <nb-spinner *ngIf="loadingPrediction" size="small" status="info"></nb-spinner>
+                </div>
+              </nb-card-header>
+              <nb-card-body *ngIf="predictionIA && !loadingPrediction" class="prediction-body">
+                <div class="prediction-content">
+                  <!-- Durée estimée principale -->
+                  <div class="prediction-main">
+                    <div class="prediction-time">
+                      <span class="time-value">{{ predictionIA.dureeFormatee }}</span>
+                      <span class="time-label">Durée estimée</span>
+                    </div>
+                    <div class="prediction-confidence">
+                      <span [style.color]="getConfidenceColor(predictionIA.confiance)">
+                        {{ predictionIA.confiance }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Détails de la prédiction -->
+                  <div class="prediction-details">
+                    <div class="prediction-row">
+                      <span class="detail-label">Type de tâche:</span>
+                      <span class="detail-value">{{ predictionIA.typeTache }}</span>
+                    </div>
+                    
+                    <div class="prediction-row" *ngIf="predictionIA.facteursInfluents.length > 0">
+                      <span class="detail-label">Facteurs influents:</span>
+                      <div class="factors-list">
+                        <span *ngFor="let facteur of predictionIA.facteursInfluents" class="factor-badge">
+                          {{ facteur }}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div class="prediction-row">
+                      <span class="detail-label">Fin estimée:</span>
+                      <span class="detail-value">
+                        {{ predictionIA.dateEstimeeCompletion | date:'dd/MM à HH:mm' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </nb-card-body>
+              
+              <!-- Message de chargement -->
+              <nb-card-body *ngIf="loadingPrediction" class="loading-body">
+                <div class="loading-content">
+                  <nb-icon icon="flash-outline" class="loading-icon"></nb-icon>
+                  <span>Calcul de l'estimation IA...</span>
+                </div>
+              </nb-card-body>
+            </nb-card>
           </div>
 
           <div class="form-actions">
@@ -58,11 +135,36 @@
       </nb-card-header>
 
       <nb-card-body>
+        <!-- ✅ Filtres par équipe -->
+        <div class="filter-section mb-3">
+          <h6>Filtrer par équipe :</h6>
+          <div class="filter-buttons">
+            <button 
+              nbButton 
+              [status]="selectedEquipeId === null ? 'primary' : 'basic'" 
+              size="small" 
+              class="mr-2 mb-2"
+              (click)="showAllTaches()">
+              Toutes les équipes
+            </button>
+            <button 
+              *ngFor="let equipe of equipes" 
+              nbButton 
+              [status]="selectedEquipeId === equipe.idEquipe ? 'primary' : 'basic'" 
+              size="small" 
+              class="mr-2 mb-2"
+              (click)="loadTachesByEquipe(equipe.idEquipe)">
+              {{ equipe.nom }}
+            </button>
+          </div>
+        </div>
+
         <div class="table-container">
           <table class="table">
             <thead>
               <tr>
                 <th>TITRE</th>
+                <th>ÉQUIPE</th>
                 <th>PRIORITÉ</th>
                 <th>ACTIONS</th>
               </tr>
@@ -70,6 +172,14 @@
             <tbody>
               <tr *ngFor="let tache of taches">
                 <td>{{ tache.titre }}</td>
+                <td>
+                  <span *ngIf="tache.equipe" class="equipe-badge">
+                    {{ tache.equipe.nom }}
+                  </span>
+                  <span *ngIf="!tache.equipe" class="text-muted">
+                    Non assignée
+                  </span>
+                </td>
                 <td class="priority-cell">
                   <span class="priority-badge" [ngClass]="getPriorityClass(tache.priorite)">
                     {{ tacheService.getPrioriteLabel(tache.priorite) }}
@@ -87,7 +197,7 @@
                 </td>
               </tr>
               <tr *ngIf="taches.length === 0">
-                <td colspan="3" class="text-center">
+                <td colspan="4" class="text-center">
                   Aucune tâche trouvée
                 </td>
               </tr>

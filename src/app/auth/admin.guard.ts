@@ -16,8 +16,8 @@ export class AdminGuard implements CanActivate {
       return true;
     }
 
-    // Si l'utilisateur n'est pas admin, rediriger vers la page projet
-    this.router.navigate(['/pages/projet']);
+    // Si l'utilisateur n'est pas admin, rediriger vers le dashboard
+    this.router.navigate(['/pages/dashboard']);
     return false;
   }
 } 

@@ -5,16 +5,22 @@ import { NbToastrService, NbDialogService } from '@nebular/theme';
 import { Router } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
 import { UserService, User } from '../../services/user.service';
+import { FileService, FileUploadResponse } from '../../services/file.service';
 import { catchError, map, finalize } from 'rxjs/operators';
 import { of, interval, Subscription, forkJoin } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 interface Conversation {
   id: string;
   otherUserId: string;
   otherUserName: string;
+  otherUserInitials: string;
+  otherUserPicture: string | null;
   messages: Message[];
   lastMessage?: Message;
   unreadCount?: number;
+  lastMessageTime: Date;
+  isOnline?: boolean;
 }
 
 interface MessageGroup {
@@ -39,6 +45,18 @@ export class MessagesComponent implements OnInit, OnDestroy {
   filteredUsers: User[] = [];
   searchTerm = '';
   private refreshInterval: Subscription;
+  
+  // Propriétés pour la gestion des fichiers
+  selectedFiles: File[] = [];
+  maxFileSize = 10 * 1024 * 1024; // 10MB
+  allowedFileTypes = [
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    'application/pdf', 
+    'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain',
+    'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/zip', 'application/x-rar-compressed'
+  ];
 
   @ViewChild('messagesList') private messagesList: ElementRef;
 
@@ -49,7 +67,8 @@ export class MessagesComponent implements OnInit, OnDestroy {
     private router: Router,
     private authService: AuthService,
     private userService: UserService,
-    private dialogService: NbDialogService
+    private dialogService: NbDialogService,
+    private fileService: FileService
   ) {
     this.messageForm = this.fb.group({
       emailDestinataire: ['', [Validators.required, Validators.email]],
@@ -67,21 +86,77 @@ export class MessagesComponent implements OnInit, OnDestroy {
     }
     
     this.loadUserInfo();
+    this.initializeMessaging();
+  }
+
+  private initializeMessaging() {
+      this.isLoading = true;
+      
+    // Charger d'abord les utilisateurs
+    this.loadAllUsers()
+      .then(() => {
+        // Puis charger les messages
+        return this.chargerMessages();
+      })
+      .then(() => {
+        console.log('Messagerie initialisée avec succès');
+      })
+      .catch(error => {
+        console.error('Erreur lors de l\'initialisation:', error);
+      this.toastrService.danger('Erreur lors du chargement de la messagerie', 'Erreur');
+      })
+      .finally(() => {
+      this.isLoading = false;
+      });
+  }
+
+  private loadAllUsers(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      console.log('Chargement des utilisateurs...');
+      
+      this.userService.getUsersForMessaging()
+        .pipe(
+          catchError(error => {
+            console.error('Erreur avec endpoint for-messaging:', error);
+            return this.userService.getUsers();
+          })
+        )
+        .subscribe({
+          next: (users) => {
+            console.log(`${users.length} utilisateurs chargés`);
+            this.utilisateurs.clear();
+            users.forEach(user => {
+              this.utilisateurs.set(user.id.toString(), user);
+            });
+            resolve();
+          },
+          error: (error) => {
+            console.error('Erreur lors du chargement des utilisateurs:', error);
+            reject(error);
+          }
+        });
+    });
+  }
+
+  private chargerMessages(): Promise<void> {
+    return new Promise((resolve, reject) => {
     if (!this.utilisateurConnecte?.id) {
-      console.warn('Impossible de charger les informations utilisateur');
+        reject('Utilisateur non connecté');
       return;
     }
     
-    console.log('Chargement des utilisateurs...');
-    this.loadAllUsers();
-    console.log('Chargement des messages...');
-    this.chargerMessages();
-
-    // Rafraîchir les messages toutes les 5 secondes
-    this.refreshInterval = interval(5000).subscribe(() => {
-      if (this.selectedConversation) {
-        this.chargerMessages(false);
-      }
+      this.messageService.getMessagesByUser(this.utilisateurConnecte.id).subscribe({
+        next: (messages) => {
+          console.log(`${messages.length} messages chargés`);
+          this.messages = messages;
+          this.groupMessagesByConversation(messages);
+          resolve();
+        },
+        error: (error) => {
+          console.error('Erreur lors du chargement des messages:', error);
+          reject(error);
+        }
+      });
     });
   }
 
@@ -100,13 +175,21 @@ export class MessagesComponent implements OnInit, OnDestroy {
         : message.expediteurId;
       
       if (!conversationsMap.has(otherUserId)) {
+        const user = this.getUserInfo(otherUserId);
+        const userName = user ? `${user.prenom} ${user.nom}` : `Utilisateur ${otherUserId}`;
+        const userInitials = user ? this.getUserInitials(user) : otherUserId.substring(0, 2).toUpperCase();
+        
         conversationsMap.set(otherUserId, {
           id: otherUserId,
           otherUserId: otherUserId,
-          otherUserName: this.getUserFullName(otherUserId),
+          otherUserName: userName,
+          otherUserInitials: userInitials,
+          otherUserPicture: this.getUserProfilePicture(otherUserId),
           messages: [],
           lastMessage: message,
-          unreadCount: 0
+          lastMessageTime: new Date(message.envoyeLe),
+          unreadCount: 0,
+          isOnline: Math.random() > 0.5
         });
       }
       
@@ -116,6 +199,7 @@ export class MessagesComponent implements OnInit, OnDestroy {
       // Mettre à jour le dernier message si celui-ci est plus récent
       if (!conversation.lastMessage || new Date(message.envoyeLe) > new Date(conversation.lastMessage.envoyeLe)) {
         conversation.lastMessage = message;
+        conversation.lastMessageTime = new Date(message.envoyeLe);
       }
 
       // Compter les messages non lus
@@ -134,354 +218,405 @@ export class MessagesComponent implements OnInit, OnDestroy {
     // Convertir la Map en tableau et trier par date du dernier message
     this.conversations = Array.from(conversationsMap.values())
       .sort((a, b) => 
-        new Date(b.lastMessage?.envoyeLe).getTime() - new Date(a.lastMessage?.envoyeLe).getTime()
+        b.lastMessageTime.getTime() - a.lastMessageTime.getTime()
       );
 
-    // Maintenir la conversation sélectionnée
-    if (this.selectedConversation) {
-      const updatedConversation = this.conversations.find(c => c.id === this.selectedConversation.id);
-      if (updatedConversation) {
-        this.selectedConversation = updatedConversation;
-        this.scrollToBottom();
-      }
-    }
+    console.log(`${this.conversations.length} conversations créées`);
   }
 
   selectConversation(conversation: Conversation) {
+    console.log('Sélection conversation:', conversation.otherUserName);
     this.selectedConversation = conversation;
     this.showNewMessageForm = false;
     
+    // Réinitialiser le formulaire avec le bon destinataire
     const otherUser = this.utilisateurs.get(conversation.otherUserId);
     if (otherUser) {
+      this.messageForm.reset();
       this.messageForm.patchValue({
-        emailDestinataire: otherUser.email
+        emailDestinataire: otherUser.email,
+        contenu: ''
       });
     }
     
     // Marquer les messages comme lus
     this.markMessagesAsRead(conversation);
     
-    setTimeout(() => {
-      this.scrollToBottom();
-    });
+    // Faire défiler vers le bas
+    setTimeout(() => this.scrollToBottom(), 200);
   }
 
-  private markMessagesAsRead(conversation: Conversation) {
-    const unreadMessages = conversation.messages.filter(
-      m => m.expediteurId !== this.utilisateurConnecte?.id && !m.lu
-    );
-
-    if (unreadMessages.length > 0) {
-      const markAsReadRequests = unreadMessages.map(message => 
-        this.messageService.marquerCommeLu(message.id)
-      );
-
-      forkJoin(markAsReadRequests)
-        .pipe(
-          catchError(err => {
-            console.error('Erreur lors du marquage des messages comme lus:', err);
-            return of(null);
-          }),
-          finalize(() => {
-            // Mettre à jour localement l'état des messages
-            unreadMessages.forEach(message => {
-              message.lu = true;
-            });
-            conversation.unreadCount = 0;
-          })
-        )
-        .subscribe();
+  getTimeDisplay(date: Date): string {
+    if (!date) return '';
+    
+    const now = new Date();
+    const messageDate = new Date(date);
+    const diffInHours = (now.getTime() - messageDate.getTime()) / (1000 * 60 * 60);
+    
+    if (diffInHours < 24) {
+      return messageDate.toLocaleTimeString('fr-FR', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+    } else if (diffInHours < 24 * 7) {
+      return messageDate.toLocaleDateString('fr-FR', { weekday: 'short' });
+    } else {
+      return messageDate.toLocaleDateString('fr-FR', { 
+        day: '2-digit', 
+        month: '2-digit' 
+      });
     }
   }
 
+  handleEnterKey(event: KeyboardEvent) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+        this.envoyerMessage();
+    }
+  }
+
+  private markMessagesAsRead(conversation: Conversation) {
+    conversation.messages
+      .filter(message => message.expediteurId !== this.utilisateurConnecte?.id && !message.lu)
+      .forEach(message => {
+        this.messageService.marquerCommeLu(message.id).subscribe({
+          next: () => {
+        message.lu = true;
+          },
+          error: (error) => {
+            console.error('Erreur lors du marquage comme lu:', error);
+          }
+        });
+      });
+    
+    // Réinitialiser le compteur de messages non lus
+            conversation.unreadCount = 0;
+  }
+
   private loadUserInfo() {
-    try {
-      const token = this.authService.getToken();
-      console.log('Token récupéré:', token ? 'Présent' : 'Absent');
-      
-      if (token) {
-        const decodedToken = this.authService['decodeToken'](token);
-        console.log('Token décodé:', decodedToken);
+    const token = this.authService.getToken();
+    if (token) {
+      try {
+        // Décoder le token pour obtenir les informations utilisateur
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        const decodedToken = JSON.parse(jsonPayload);
         
-        this.utilisateurConnecte = {
+    this.utilisateurConnecte = {
           id: decodedToken.nameid,
-          email: decodedToken.email,
-          role: decodedToken.role
-        };
+            email: decodedToken.email,
+            role: decodedToken.role,
+          prenom: decodedToken.prenom || 'Utilisateur',
+          nom: decodedToken.nom || ''
+          };
         console.log('Utilisateur connecté:', this.utilisateurConnecte);
-      } else {
-        console.warn('Aucun token trouvé');
+      } catch (error) {
+        console.error('Erreur lors du décodage du token:', error);
         this.router.navigate(['/auth/login']);
       }
-    } catch (error) {
-      console.error('Erreur lors du chargement des informations utilisateur:', error);
-      this.toastrService.danger('Erreur lors du chargement des informations utilisateur', 'Erreur');
+    } else {
+      console.error('Aucun token trouvé');
       this.router.navigate(['/auth/login']);
     }
   }
 
-  private loadAllUsers() {
-    this.userService.getUsers().subscribe({
-      next: (users) => {
-        users.forEach(user => {
-          this.utilisateurs.set(user.id.toString(), user);
-        });
-      },
-      error: (error) => {
-        console.error('Erreur lors du chargement des utilisateurs:', error);
-        this.toastrService.danger('Erreur lors du chargement des utilisateurs', 'Erreur');
-      }
-    });
-  }
-
   getUserFullName(userId: string): string {
-    const user = this.utilisateurs.get(userId);
-    return user ? `${user.prenom} ${user.nom}` : 'Utilisateur inconnu';
+    const user = this.getUserInfo(userId);
+    return user ? `${user.prenom} ${user.nom}` : `Utilisateur ${userId}`;
   }
 
-  // Méthode pour générer une couleur unique pour un utilisateur
   private getUserColor(userId: string): string {
     const colors = [
-      '667eea', '764ba2', '00d68f', 'ff6b6b', '4ecdc4', 
-      '45b7d1', '96ceb4', 'feca57', 'ff9ff3', '54a0ff',
-      '5f27cd', '00d2d3', 'ff9f43', '10ac84', 'ee5a6f',
-      '0abde3', 'feca57', 'ff6348', '48dbfb', '0be881'
+      '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57',
+      '#FF9FF3', '#54A0FF', '#5F27CD', '#00D2D3', '#FF9F43',
+      '#10AC84', '#EE5A24', '#0984E3', '#6C5CE7', '#FD79A8'
     ];
     
-    // Utiliser l'ID utilisateur pour choisir une couleur de manière déterministe
-    const colorIndex = parseInt(userId) % colors.length;
-    return colors[colorIndex];
+    const hash = userId.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    
+    return colors[Math.abs(hash) % colors.length];
   }
 
-  // Méthode pour récupérer l'URL de la photo de profil
+  private avatarCache = new Map<string, string>();
+
   getUserProfilePicture(userId: string): string | null {
-    console.log('getUserProfilePicture appelée pour userId:', userId);
-    const user = this.utilisateurs.get(userId);
-    console.log('Utilisateur trouvé:', user);
+    if (!userId) return null;
     
-    if (user) {
-      // Si l'utilisateur a une photo de profil personnalisée, l'utiliser
-      if (user.profilePicture) {
-        console.log('Photo de profil personnalisée trouvée:', user.profilePicture);
-        return user.profilePicture;
-      }
-      
-      // Générer un avatar SVG local avec les initiales et une couleur unique
-      const initials = this.getUserInitials(user);
-      const backgroundColor = this.getUserColor(userId);
-      const avatarSvg = this.generateAvatarSvg(initials, backgroundColor);
-      console.log('Avatar SVG généré pour:', user.prenom, user.nom);
-      return avatarSvg;
+    // Vérifier le cache d'abord
+    if (this.avatarCache.has(userId)) {
+      return this.avatarCache.get(userId);
     }
     
-    console.log('Aucun utilisateur trouvé pour userId:', userId);
-    // Retourner null pour utiliser les initiales par défaut de Nebular
-    return null;
+    const user = this.getUserInfo(userId);
+    if (user?.profilePicture) {
+      this.avatarCache.set(userId, user.profilePicture);
+      return user.profilePicture;
+    }
+    
+    // Générer un avatar SVG avec les initiales
+    const initials = user ? this.getUserInitials(user) : userId.substring(0, 2).toUpperCase();
+        const backgroundColor = this.getUserColor(userId);
+    const avatarSvg = this.generateAvatarSvg(initials, backgroundColor);
+    
+    this.avatarCache.set(userId, avatarSvg);
+    return avatarSvg;
   }
 
-  // Méthode pour obtenir les initiales d'un utilisateur
-  private getUserInitials(user: User): string {
-    const firstInitial = user.prenom ? user.prenom.charAt(0).toUpperCase() : '';
-    const lastInitial = user.nom ? user.nom.charAt(0).toUpperCase() : '';
-    return firstInitial + lastInitial;
+  getUserInitials(user: any): string {
+    if (!user) return '?';
+    const prenom = user.prenom || '';
+    const nom = user.nom || '';
+    return (prenom.charAt(0) + nom.charAt(0)).toUpperCase() || user.email?.charAt(0).toUpperCase() || '?';
   }
 
-  // Méthode pour générer un avatar SVG avec les initiales
   private generateAvatarSvg(initials: string, backgroundColor: string): string {
     const svg = `
-      <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="32" cy="32" r="32" fill="#${backgroundColor}"/>
-        <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="24" font-weight="bold" 
-              fill="white" text-anchor="middle" dy=".3em">${initials}</text>
+      <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="20" r="20" fill="${backgroundColor}"/>
+        <text x="20" y="25" text-anchor="middle" fill="white" font-family="Arial" font-size="14" font-weight="bold">${initials}</text>
       </svg>
     `;
     return 'data:image/svg+xml;base64,' + btoa(svg);
   }
 
-  // Méthode pour obtenir les informations utilisateur complètes
   getUserInfo(userId: string): User | null {
     return this.utilisateurs.get(userId) || null;
   }
 
-  // Méthode pour gérer les erreurs de chargement d'images
   onImageError(event: Event) {
-    const imgElement = event.target as HTMLImageElement;
-    // Remplacer par un avatar de fallback plus simple
-    imgElement.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzIiIGZpbGw9IiM2NjdlZWEiLz4KPHR3eHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+dTwvdGV4dD4KPC9zdmc+';
+    const img = event.target as HTMLImageElement;
+    img.style.display = 'none';
   }
 
   getMessageUserName(message: Message): string {
-    if (message.expediteurId === this.utilisateurConnecte?.id) {
-      return this.getUserFullName(message.destinataireId);
+    if (message.expediteur) {
+      return `${message.expediteur.prenom} ${message.expediteur.nom}`;
     }
     return this.getUserFullName(message.expediteurId);
   }
 
   isMessageSent(message: Message): boolean {
-    return message.expediteurId === this.utilisateurConnecte?.id;
+    const cleanString = (val: any): string => String(val || '').trim();
+    return cleanString(message.expediteurId) === cleanString(this.utilisateurConnecte?.id);
   }
 
   selectMessage(message: Message) {
-    this.selectedConversation = null;
-    const otherUserId = this.isMessageSent(message) ? message.destinataireId : message.expediteurId;
-    const otherUser = this.utilisateurs.get(otherUserId);
-    if (otherUser) {
-      this.messageForm.patchValue({
-        emailDestinataire: otherUser.email
-      });
-    }
-    setTimeout(() => {
-      this.scrollToBottom();
-    });
+    console.log('Message sélectionné:', message);
   }
 
   private scrollToBottom() {
     try {
-      this.messagesList.nativeElement.scrollTop = this.messagesList.nativeElement.scrollHeight;
-    } catch (err) { }
-  }
-
-  chargerMessages(showLoading = true) {
-    if (this.utilisateurConnecte?.id) {
-      if (showLoading) {
-        this.isLoading = true;
+      if (this.messagesList) {
+        this.messagesList.nativeElement.scrollTop = this.messagesList.nativeElement.scrollHeight;
       }
-      
-      console.log('Chargement des messages pour utilisateur:', this.utilisateurConnecte.id);
-      
-      this.messageService.getMessagesByUser(this.utilisateurConnecte.id)
-        .pipe(
-          catchError(err => {
-            console.error('Erreur lors du chargement des messages:', err);
-            if (showLoading) {
-              this.toastrService.danger('Erreur lors du chargement des messages', 'Erreur');
-            }
-            return of([]);
-          })
-        )
-        .subscribe({
-          next: (messages) => {
-            console.log('Messages reçus:', messages);
-            this.messages = messages;
-            this.groupMessagesByConversation(messages);
-            console.log('Conversations groupées:', this.conversations);
-            
-            if (showLoading) {
-              this.isLoading = false;
-              if (this.conversations.length > 0 && !this.selectedConversation) {
-                console.log('Sélection de la première conversation');
-                this.selectConversation(this.conversations[0]);
-              }
-            }
-          },
-          error: () => {
-            if (showLoading) {
-              this.isLoading = false;
-            }
-          }
-        });
-    } else {
-      console.warn('Aucun utilisateur connecté');
+    } catch (err) {
+      console.error('Erreur lors du scroll:', err);
     }
   }
 
   envoyerMessage() {
-    if (!this.utilisateurConnecte?.email) {
-      this.toastrService.warning('Vous devez être connecté pour envoyer un message', 'Attention');
+    if (this.messageForm.valid && this.messageForm.value.contenu.trim()) {
+      const emailDestinataire = this.messageForm.value.emailDestinataire;
+      console.log('📤 Envoi message vers email:', emailDestinataire);
+      
+      // Trouver l'ID du destinataire à partir de son email
+      let destinataireId = null;
+      for (const [id, user] of this.utilisateurs.entries()) {
+        if (user.email === emailDestinataire) {
+          destinataireId = id;
+          console.log('✅ Destinataire trouvé - Email:', user.email, 'ID:', id);
+          break;
+        }
+      }
+      
+      if (!destinataireId) {
+        console.error('❌ Destinataire non trouvé pour email:', emailDestinataire);
+        this.toastrService.danger('Destinataire non trouvé', 'Erreur');
       return;
     }
 
-    if (this.messageForm.valid && !this.isLoading) {
-      this.isLoading = true;
-      const messageDto: CreateMessageDto = {
-        contenu: this.messageForm.get('contenu')?.value,
-        expediteurEmail: this.utilisateurConnecte.email,
-        emailDestinataire: this.messageForm.get('emailDestinataire')?.value
+      const messageData: CreateMessageDto = {
+        contenu: this.messageForm.value.contenu.trim(),
+        expediteurEmail: this.utilisateurConnecte?.email || '',
+        emailDestinataire: emailDestinataire,
+        expediteurId: this.utilisateurConnecte?.id,
+        destinataireId: destinataireId
       };
 
-      this.messageService.envoyerMessage(messageDto)
-        .pipe(
-          catchError(err => {
-            console.error('Erreur lors de l\'envoi du message:', err);
-            this.toastrService.danger('Erreur lors de l\'envoi du message', 'Erreur');
-            return of(null);
-          })
-        )
-        .subscribe({
-          next: (response) => {
-            if (response !== null) {
-              this.messageForm.get('contenu')?.reset();
-              this.chargerMessages(false);
+      console.log('📋 Données du message à envoyer:', {
+        contenu: messageData.contenu,
+        expediteurEmail: messageData.expediteurEmail,
+        emailDestinataire: messageData.emailDestinataire,
+        expediteurId: messageData.expediteurId,
+        destinataireId: messageData.destinataireId
+      });
+
+      this.messageService.envoyerMessage(messageData).subscribe({
+        next: (response) => {
+          console.log('✅ Message envoyé avec succès:', response);
+          this.toastrService.success('Message envoyé avec succès', 'Succès');
+          
+          // Réinitialiser SEULEMENT le contenu, pas le destinataire
+          this.messageForm.patchValue({ contenu: '' });
+          
+          // Recharger les messages
+          this.chargerMessages().then(() => {
+            // Maintenir la conversation sélectionnée après rechargement
+              if (this.selectedConversation) {
+              const updatedConversation = this.conversations.find(c => c.id === this.selectedConversation.id);
+              if (updatedConversation) {
+                this.selectedConversation = updatedConversation;
+                setTimeout(() => this.scrollToBottom(), 100);
+              }
             }
-            this.isLoading = false;
-          },
-          error: () => {
-            this.isLoading = false;
-          }
-        });
+          });
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors de l\'envoi du message:', error);
+          this.toastrService.danger('Erreur lors de l\'envoi du message', 'Erreur');
+        }
+      });
+    } else {
+      console.warn('⚠️ Formulaire invalide ou contenu vide');
+      if (!this.messageForm.value.emailDestinataire) {
+        this.toastrService.warning('Veuillez sélectionner un destinataire', 'Attention');
+      }
+      if (!this.messageForm.value.contenu?.trim()) {
+        this.toastrService.warning('Veuillez saisir un message', 'Attention');
+      }
     }
   }
 
   toggleNewMessageForm() {
     this.showNewMessageForm = !this.showNewMessageForm;
+    this.selectedConversation = null;
+    
     if (this.showNewMessageForm) {
+      // Réinitialiser complètement le formulaire pour un nouveau message
       this.messageForm.reset();
-      this.selectedConversation = null;
+      this.messageForm.patchValue({
+        emailDestinataire: '',
+        contenu: ''
+      });
+      this.filterUsers('');
     }
   }
 
   filterUsers(searchTerm: string) {
-    this.searchTerm = searchTerm;
-    if (!searchTerm) {
-      this.filteredUsers = [];
-      return;
+    if (!searchTerm.trim()) {
+      this.filteredUsers = Array.from(this.utilisateurs.values())
+        .filter(user => user.id.toString() !== this.utilisateurConnecte?.id)
+        .slice(0, 10);
+    } else {
+      this.filteredUsers = Array.from(this.utilisateurs.values())
+        .filter(user => {
+          const fullName = `${user.prenom} ${user.nom}`.toLowerCase();
+          const email = user.email.toLowerCase();
+          const search = searchTerm.toLowerCase();
+          return user.id.toString() !== this.utilisateurConnecte?.id &&
+                 (fullName.includes(search) || email.includes(search));
+        })
+        .slice(0, 10);
     }
-    
-    const search = searchTerm.toLowerCase();
-    this.filteredUsers = Array.from(this.utilisateurs.values())
-      .filter(user => 
-        user.id !== this.utilisateurConnecte?.id &&
-        (user.email.toLowerCase().includes(search) ||
-        user.nom.toLowerCase().includes(search) ||
-        user.prenom.toLowerCase().includes(search))
-      );
   }
 
   selectUser(user: User) {
+    // Réinitialiser le formulaire avec le nouvel utilisateur sélectionné
+    this.messageForm.reset();
     this.messageForm.patchValue({
-      emailDestinataire: user.email
+      emailDestinataire: user.email,
+      contenu: ''
     });
     this.filteredUsers = [];
     this.searchTerm = '';
+    
+    console.log('👤 Utilisateur sélectionné:', user.email);
   }
 
-  getMessageGroups(): MessageGroup[] {
-    if (!this.selectedConversation) {
-      console.warn('Aucune conversation sélectionnée');
+  messageGroup: MessageGroup[] = [];
+
+  get messageGroups(): MessageGroup[] {
+    if (!this.selectedConversation?.messages) {
       return [];
     }
 
-    const groups = new Map<string, MessageGroup>();
-    
-    this.selectedConversation.messages.forEach(message => {
-      const date = new Date(message.envoyeLe);
-      const dateKey = date.toDateString();
+    const groups: MessageGroup[] = [];
+    const messages = this.selectedConversation.messages;
+
+    messages.forEach(message => {
+      const messageDate = new Date(message.envoyeLe);
+      const dateKey = messageDate.toDateString();
       
-      if (!groups.has(dateKey)) {
-        groups.set(dateKey, {
-          date: date,
+      let group = groups.find(g => g.date.toDateString() === dateKey);
+      if (!group) {
+        group = {
+          date: messageDate,
           messages: []
-        });
+        };
+        groups.push(group);
       }
       
-      groups.get(dateKey).messages.push(message);
+      group.messages.push(message);
     });
 
-    const result = Array.from(groups.values()).sort((a, b) => 
-      a.date.getTime() - b.date.getTime()
-    );
+    return groups.sort((a, b) => a.date.getTime() - b.date.getTime());
+  }
+
+  // Méthodes pour les fichiers (simplifiées)
+  onFileSelected(event: Event): void {
+    // Implementation simplifiée
+  }
+
+  isFileMessage(message: Message): boolean {
+    return message.isFile || !!message.fileId;
+  }
+
+  isImageFile(message: Message): boolean {
+    if (!message.mimeType) return false;
+    return message.mimeType.startsWith('image/');
+  }
+
+  getFileIcon(message: Message): string {
+    if (!message.mimeType) return 'file-text-outline';
     
-    console.log('Groupes de messages:', result);
-    return result;
+    if (message.mimeType.includes('pdf')) return 'file-text-outline';
+    if (message.mimeType.includes('word')) return 'file-text-outline';
+    if (message.mimeType.includes('excel') || message.mimeType.includes('spreadsheet')) return 'file-text-outline';
+    if (message.mimeType.includes('zip') || message.mimeType.includes('rar')) return 'archive-outline';
+    
+    return 'file-outline';
+  }
+
+  getFilePreviewUrl(message: Message): string | null {
+    if (message.fileId && this.isImageFile(message)) {
+      return `${environment.apiUrl}/files/${message.fileId}`;
+    }
+    return null;
+  }
+
+  openFilePreview(message: Message): void {
+    if (message.fileId) {
+      window.open(`${environment.apiUrl}/files/${message.fileId}`, '_blank');
+    }
+  }
+
+  downloadFile(message: Message): void {
+    if (message.fileId) {
+      window.open(`${environment.apiUrl}/files/${message.fileId}/download`, '_blank');
+    }
+  }
+
+  private formatFileSize(bytes: number): string {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 } 

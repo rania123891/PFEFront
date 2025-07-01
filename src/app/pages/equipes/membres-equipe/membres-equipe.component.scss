@@ -184,4 +184,78 @@ nb-card-body {
   border-radius: 0.25rem;
   font-size: 0.875rem;
   font-weight: 500;
+}
+
+// Styles pour la sélection côte à côte
+.selection-row {
+  background-color: #f8f9fc;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #e4e9f2;
+
+  .label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #222b45;
+    font-size: 0.9375rem;
+  }
+
+  nb-select {
+    border-radius: 0.5rem;
+    border: 1px solid #e4e9f2;
+    background-color: white;
+    
+    &:focus {
+      border-color: #3366ff;
+      box-shadow: 0 0 0 0.125rem rgba(51, 102, 255, 0.25);
+    }
+  }
+
+  button {
+    border-radius: 0.5rem;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    transition: all 0.2s;
+
+    &[status="primary"] {
+      background-color: #3366ff;
+      border-color: #3366ff;
+      
+      &:hover:not(:disabled) {
+        background-color: darken(#3366ff, 10%);
+        border-color: darken(#3366ff, 10%);
+        transform: translateY(-1px);
+      }
+      
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+
+    &[status="basic"] {
+      background-color: #f7f9fc;
+      border-color: #e4e9f2;
+      color: #8f9bb3;
+      
+      &:hover:not(:disabled) {
+        background-color: #edf1f7;
+        border-color: #c5cee0;
+      }
+    }
+  }
+}
+
+.me-2 {
+  margin-right: 0.5rem !important;
+}
+
+.d-flex {
+  display: flex !important;
+}
+
+.align-items-end {
+  align-items: flex-end !important;
 } 

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { EquipesComponent } from './equipes.component';
+import { AffectationProjetsComponent } from './affectation-projets/affectation-projets.component';
 import { MembresEquipeSharedModule } from './membres-equipe/membres-equipe.module';
 import { MembresEquipeComponent } from './membres-equipe/membres-equipe.component';
 import {
@@ -13,6 +14,7 @@ import {
   NbSelectModule,
   NbFormFieldModule,
   NbToastrModule,
+  NbSpinnerModule,
 } from '@nebular/theme';
 
 @NgModule({
@@ -27,6 +29,7 @@ import {
     NbSelectModule,
     NbFormFieldModule,
     NbToastrModule,
+    NbSpinnerModule,
     MembresEquipeSharedModule,
     RouterModule.forChild([
       {
@@ -45,6 +48,7 @@ import {
   ],
   declarations: [
     EquipesComponent,
+    AffectationProjetsComponent,
   ],
 })
 export class EquipesModule { } 

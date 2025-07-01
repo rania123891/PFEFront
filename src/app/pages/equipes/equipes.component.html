@@ -1,5 +1,5 @@
 <!-- Vue Liste des Équipes -->
-<div class="row" *ngIf="!showAddForm && !showEditForm">
+<div class="row" *ngIf="!showAddForm && !showEditForm && !selectedEquipeForAffectation">
   <div class="col-md-12">
     <nb-card>
       <nb-card-header class="d-flex justify-content-between align-items-center">
@@ -29,32 +29,44 @@
               <tr>
                 <th>NOM</th>
                 <th>STATUT</th>
-                <th>DOMAINE</th>
-                <th>PROJET</th>
+                <th>PROJET(S)</th>
                 <th>ACTIONS</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let equipe of equipes">
                 <td>{{ equipe.nom }}</td>
-                <td class="status-cell">
-                  <span class="status-badge" [ngClass]="getStatutClass(equipe.statut)">
-                    {{ getStatutLabel(equipe.statut) }}
-                  </span>
+                <td>
+                  <span>{{ equipe.statut }}</span> - 
+                  <span>{{ getStatutLabel(equipe.statut) }}</span>
+                  <nb-badge [status]="getStatutBadgeStatus(equipe.statut)" [text]="getStatutLabel(equipe.statut)"></nb-badge>
                 </td>
-                <td>{{ getDomaineLabel(equipe.domaineActivite) }}</td>
-                <td>{{ equipe.projet?.nom || '---' }}</td>
+                <td class="projets-cell">
+                  <span *ngIf="!equipe.projets || equipe.projets.length === 0" class="text-muted">
+                    Aucun projet
+                  </span>
+                  <div *ngIf="equipe.projets && equipe.projets.length > 0" class="projets-container">
+                    <span 
+                      *ngFor="let projet of equipe.projets" 
+                      class="projet-badge">
+                      {{ projet.nom }}
+                    </span>
+                  </div>
+                </td>
                 <td class="actions-cell">
-                  <button nbButton ghost status="info" class="action-button" (click)="openEditForm(equipe)">
+                  <button nbButton ghost status="primary" class="action-button" (click)="showAffectationProjets(equipe.idEquipe!)" title="Gérer les projets">
+                    <nb-icon icon="briefcase-outline"></nb-icon>
+                  </button>
+                  <button nbButton ghost status="info" class="action-button" (click)="openEditForm(equipe)" title="Modifier">
                     <nb-icon icon="edit-2-outline"></nb-icon>
                   </button>
-                  <button nbButton ghost status="danger" class="action-button" (click)="onDelete(equipe?.idEquipe)">
+                  <button nbButton ghost status="danger" class="action-button" (click)="onDelete(equipe?.idEquipe)" title="Supprimer">
                     <nb-icon icon="trash-2-outline"></nb-icon>
                   </button>
                 </td>
               </tr>
               <tr *ngIf="equipes.length === 0">
-                <td colspan="5" class="text-center">Aucune équipe trouvée</td>
+                <td colspan="4" class="text-center">Aucune équipe trouvée</td>
               </tr>
             </tbody>
           </table>
@@ -74,43 +86,50 @@
       <nb-card-body>
         <form [formGroup]="equipeForm" (ngSubmit)="onSubmit()">
           <div class="row">
-            <div class="col-md-3">
+            <div class="col-md-6">
               <div class="form-group">
-                <label class="label">Nom de l'équipe</label>
-                <input nbInput fullWidth formControlName="nom" type="text" placeholder="Nom de l'équipe">
+                <label class="label">Nom de l'équipe *</label>
+                <input nbInput fullWidth formControlName="nom" placeholder="Entrer le nom de l'équipe" 
+                  [status]="equipeForm.get('nom')?.touched && equipeForm.get('nom')?.invalid ? 'danger' : 'basic'">
+                <div class="error-message" *ngIf="equipeForm.get('nom')?.touched && equipeForm.get('nom')?.invalid">
+                  <div *ngIf="equipeForm.get('nom')?.errors?.['required']">Le nom est requis</div>
+                  <div *ngIf="equipeForm.get('nom')?.errors?.['minlength']">Le nom doit contenir au moins 2 caractères</div>
+                </div>
               </div>
             </div>
-
-            <div class="col-md-3">
+            <div class="col-md-6">
               <div class="form-group">
-                <label class="label">Statut</label>
-                <nb-select fullWidth formControlName="statut">
-                  <nb-option [value]="statutEquipe.Active">Active</nb-option>
-                  <nb-option [value]="statutEquipe.Inactive">Inactive</nb-option>
-                </nb-select>
-              </div>
-            </div>
-
-            <div class="col-md-3">
-              <div class="form-group">
-                <label class="label">Domaine d'activité</label>
-                <nb-select fullWidth formControlName="domaineActivite">
-                  <nb-option *ngFor="let domaine of domaines" [value]="domaine.value">
-                    {{ domaine.label }}
+                <label class="label">Statut *</label>
+                <nb-select fullWidth formControlName="statut" placeholder="Sélectionner le statut"
+                  [status]="equipeForm.get('statut')?.touched && equipeForm.get('statut')?.invalid ? 'danger' : 'basic'">
+                  <nb-option *ngFor="let statut of statuts" [value]="statut.value">
+                    {{ statut.label }}
                   </nb-option>
                 </nb-select>
+                <div class="error-message" *ngIf="equipeForm.get('statut')?.touched && equipeForm.get('statut')?.invalid">
+                  Le statut est requis
+                </div>
               </div>
             </div>
+          </div>
 
-            <div class="col-md-3">
+          <div class="row">
+            <div class="col-md-12">
               <div class="form-group">
-                <label class="label">Projet</label>
-                <nb-select fullWidth formControlName="projetId">
-                  <nb-option [value]="null">Sélectionner un projet</nb-option>
+                <label class="label">Projets (optionnel)</label>
+                <nb-select 
+                  fullWidth 
+                  multiple 
+                  placeholder="Sélectionner des projets"
+                  [value]="selectedProjets"
+                  (selectedChange)="onProjetSelectionChange($event)">
                   <nb-option *ngFor="let projet of projets" [value]="projet.id">
                     {{ projet.nom }}
                   </nb-option>
                 </nb-select>
+                <small class="form-text text-muted mt-1">
+                  {{ getSelectedProjetsNames() }}
+                </small>
               </div>
             </div>
           </div>
@@ -126,6 +145,27 @@
             </div>
           </div>
         </form>
+      </nb-card-body>
+    </nb-card>
+  </div>
+</div>
+
+<!-- Vue Affectation des Projets -->
+<div class="row" *ngIf="selectedEquipeForAffectation">
+  <div class="col-md-12">
+    <nb-card>
+      <nb-card-header class="d-flex justify-content-between align-items-center">
+        <h5>Gestion des Projets - {{ selectedEquipeForAffectation?.nom || 'Équipe' }}</h5>
+        <button nbButton status="basic" (click)="cancelForm()">
+          <nb-icon icon="arrow-back-outline"></nb-icon>
+          Retour à la liste
+        </button>
+      </nb-card-header>
+      <nb-card-body>
+        <ngx-affectation-projets 
+          [equipeId]="selectedEquipeForAffectation?.idEquipe"
+          (affectationChange)="onAffectationChange()">
+        </ngx-affectation-projets>
       </nb-card-body>
     </nb-card>
   </div>

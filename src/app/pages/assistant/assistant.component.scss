@@ -271,27 +271,345 @@ nb-card-body {
 }
 
 .response-message {
-  margin: 2.5rem 0;
-  padding: 2rem;
-  border-radius: 20px;
-  background: rgba(51, 102, 255, 0.08);
-  border: 2px solid rgba(51, 102, 255, 0.15);
-  animation: slideInUp 0.5s ease-out;
-  box-shadow: 0 8px 20px rgba(51, 102, 255, 0.1);
+  margin-top: 3rem;
+  animation: fadeInUp 0.6s ease-out;
 
   .message-content {
+    border-radius: 20px;
+    padding: 2.5rem;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+      pointer-events: none;
+    }
+
+    // En-tête de réponse amélioré
+    .response-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+
+      .response-icon {
+        font-size: 2rem;
+        margin-right: 1rem;
+      }
+
+      .response-meta {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+
+        .command-type {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          background: rgba(51, 102, 255, 0.1);
+          padding: 0.5rem 1rem;
+          border-radius: 20px;
+          font-size: 0.9rem;
+          font-weight: 600;
+          color: #3366ff;
+
+          nb-icon {
+            font-size: 1.2rem;
+          }
+        }
+
+        .confidence-badge {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.5rem 1rem;
+          border-radius: 20px;
+          font-size: 0.9rem;
+          font-weight: 600;
+          transition: all 0.3s ease;
+
+          &.badge-success {
+            background: rgba(0, 214, 143, 0.15);
+            color: #00d68f;
+          }
+
+          &.badge-warning {
+            background: rgba(255, 178, 54, 0.15);
+            color: #ffb236;
+          }
+
+          &.badge-info {
+            background: rgba(51, 102, 255, 0.15);
+            color: #3366ff;
+          }
+
+          &.badge-danger {
+            background: rgba(255, 61, 113, 0.15);
+            color: #ff3d71;
+          }
+
+          nb-icon {
+            font-size: 1rem;
+          }
+        }
+      }
+    }
+
+    // Données extraites
+    .extracted-data {
+      margin-top: 2rem;
+      border-top: 1px solid rgba(0, 0, 0, 0.1);
+      padding-top: 1.5rem;
+
+      .details-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+        font-weight: 600;
+        color: #8f9bb3;
+
+        &:hover {
+          background: rgba(51, 102, 255, 0.05);
+          color: #3366ff;
+        }
+
+        nb-icon {
+          font-size: 1.2rem;
+          transition: transform 0.3s ease;
+
+          &.rotated {
+            transform: rotate(180deg);
+          }
+        }
+      }
+
+      .details-content {
+        margin-top: 1rem;
+        display: grid;
+        gap: 0.8rem;
+
+        .data-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0.8rem 1rem;
+          background: rgba(255, 255, 255, 0.5);
+          border-radius: 10px;
+          border: 1px solid rgba(0, 0, 0, 0.05);
+
+          .data-key {
+            font-weight: 600;
+            color: #8f9bb3;
+            min-width: 100px;
+          }
+
+          .data-value {
+            color: #1a1f33;
+            font-weight: 500;
+            text-align: right;
+            background: rgba(51, 102, 255, 0.1);
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.9rem;
+          }
+        }
+      }
+    }
+
+    &.message-success {
+      background: linear-gradient(135deg, rgba(0, 214, 143, 0.1) 0%, rgba(0, 214, 143, 0.05) 100%);
+      border-left: 4px solid #00d68f;
+
+      .response-icon {
+        color: #00d68f;
+      }
+    }
+
+    &.message-error {
+      background: linear-gradient(135deg, rgba(255, 61, 113, 0.1) 0%, rgba(255, 61, 113, 0.05) 100%);
+      border-left: 4px solid #ff3d71;
+
+      .response-icon {
+        color: #ff3d71;
+      }
+    }
+
+    &.message-warning {
+      background: linear-gradient(135deg, rgba(255, 178, 54, 0.1) 0%, rgba(255, 178, 54, 0.05) 100%);
+      border-left: 4px solid #ffb236;
+
+      .response-icon {
+        color: #ffb236;
+      }
+    }
+
+    &.message-info {
+      background: linear-gradient(135deg, rgba(51, 102, 255, 0.1) 0%, rgba(51, 102, 255, 0.05) 100%);
+      border-left: 4px solid #3366ff;
+
+      .response-icon {
+        color: #3366ff;
+      }
+    }
+  }
+
+  .response-text {
+    font-size: 1.2rem;
+    line-height: 1.8;
+    color: #1a1f33;
+    white-space: pre-wrap;
+    font-weight: 500;
+    margin: 0;
+    font-family: inherit;
+  }
+}
+
+// Historique amélioré
+.history-card {
+  margin-top: 2rem;
+  
+  .history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    
+    h6 {
+      margin: 0;
+      color: #1a1f33;
+      font-weight: 600;
+    }
+  }
+  
+  .history-items {
+    max-height: 400px;
+    overflow-y: auto;
+    
+    .history-item {
+      padding: 1rem;
+      border-radius: 15px;
+      margin-bottom: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      background: rgba(255, 255, 255, 0.5);
+      
+      &:hover {
+        background: rgba(51, 102, 255, 0.05);
+        transform: translateX(5px);
+        border-color: rgba(51, 102, 255, 0.2);
+      }
+      
+      .history-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+        
+        .command-text {
+          flex: 1;
+          font-weight: 500;
+          color: #1a1f33;
+        }
+        
+        .history-meta {
+          display: flex;
+          align-items: center;
+          gap: 0.8rem;
+          font-size: 0.8rem;
+          
+          .command-type-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            background: rgba(51, 102, 255, 0.1);
+            padding: 0.2rem 0.6rem;
+            border-radius: 10px;
+            color: #3366ff;
+            font-weight: 600;
+            
+            nb-icon {
+              font-size: 0.9rem;
+            }
+          }
+          
+          .confidence-mini {
+            background: rgba(0, 214, 143, 0.1);
+            color: #00d68f;
+            padding: 0.2rem 0.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+          }
+          
+          .timestamp {
+            color: #8f9bb3;
+            font-weight: 500;
+          }
+        }
+        
+        .icon-success {
+          color: #00d68f;
+        }
+        
+        .icon-error {
+          color: #ff3d71;
+        }
+        
+        .icon-pending {
+          color: #ffb236;
+        }
+      }
+      
+      .response-preview {
+        color: #8f9bb3;
+        font-size: 0.9rem;
+        margin-left: 2rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+      }
+    }
+  }
+}
+
+// Bouton historique
+.controls {
+  .history-button {
+    width: 60px;
+    height: 60px;
+    background: rgba(51, 102, 255, 0.1);
+    border-radius: 50%;
+    color: #3366ff;
     display: flex;
     align-items: center;
-    gap: 1.2rem;
-    color: #1a1f33;
-    font-size: 1.2rem;
-    line-height: 1.7;
-    font-weight: 500;
-
-    .response-icon {
-      font-size: 1.8rem;
-      color: #3366ff;
-      filter: drop-shadow(0 2px 4px rgba(51, 102, 255, 0.2));
+    justify-content: center;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      background: rgba(51, 102, 255, 0.2);
+      transform: scale(1.1);
+    }
+    
+    &.active {
+      background: #3366ff;
+      color: white;
+    }
+    
+    nb-icon {
+      font-size: 1.5rem;
     }
   }
 }
@@ -488,62 +806,6 @@ nb-card-body {
     strong {
       color: #3366ff;
       font-weight: 600;
-    }
-  }
-}
-
-// Styles pour les messages de réponse améliorés
-.response-message {
-  margin: 2rem 0;
-  
-  .message-content {
-    padding: 1.5rem;
-    border-radius: 15px;
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-
-    &.message-success {
-      background: rgba(0, 214, 143, 0.1);
-      border: 1px solid rgba(0, 214, 143, 0.2);
-      
-      .response-icon {
-        color: #00d68f;
-      }
-    }
-
-    &.message-error {
-      background: rgba(255, 61, 113, 0.1);
-      border: 1px solid rgba(255, 61, 113, 0.2);
-      
-      .response-icon {
-        color: #ff3d71;
-      }
-    }
-
-    &.message-warning {
-      background: rgba(255, 170, 0, 0.1);
-      border: 1px solid rgba(255, 170, 0, 0.2);
-      
-      .response-icon {
-        color: #ffaa00;
-      }
-    }
-
-    .response-icon {
-      font-size: 1.5rem;
-      flex-shrink: 0;
-      margin-top: 0.2rem;
-    }
-
-    .response-text {
-      flex: 1;
-      margin: 0;
-      white-space: pre-wrap;
-      font-family: inherit;
-      font-size: 0.95rem;
-      line-height: 1.5;
-      color: #1a1f33;
     }
   }
 } 

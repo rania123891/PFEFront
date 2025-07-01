@@ -30,6 +30,7 @@
                 <th>NOM</th>
                 <th>DESCRIPTION</th>
                 <th>STATUT</th>
+                <th>ÉQUIPE(S)</th>
                 <th>DATE DE DÉBUT</th>
                 <th>DATE D'ÉCHÉANCE</th>
                 <th>DURÉE (JOURS)</th>
@@ -44,6 +45,18 @@
                   <span class="status-badge" [ngClass]="getStatutClass(projet.statut)">
                     {{ getStatutLabel(projet.statut) }}
                   </span>
+                </td>
+                <td class="equipes-cell">
+                  <span *ngIf="!projet.equipes || projet.equipes.length === 0" class="text-muted">
+                    Aucune équipe
+                  </span>
+                  <div *ngIf="projet.equipes && projet.equipes.length > 0" class="equipes-container">
+                    <span 
+                      *ngFor="let equipe of projet.equipes" 
+                      class="equipe-badge">
+                      {{ equipe.nom }}
+                    </span>
+                  </div>
                 </td>
                 <td>{{ projet.dateDebut | date:'dd/MM/yyyy' }}</td>
                 <td>{{ projet.dateEcheance | date:'dd/MM/yyyy' }}</td>

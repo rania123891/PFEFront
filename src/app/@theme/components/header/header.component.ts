@@ -28,8 +28,8 @@ import { ProfileService } from '../../../services/profile.service';
           <nb-user class="larger-user-picture"
                    [nbContextMenu]="userMenu"
                    [onlyPicture]="userPictureOnly"
-                   [name]="getUserDisplayName()"
-                   [picture]="getUserProfilePhoto()">
+                   [name]="userDisplayName"
+                   [picture]="userProfilePhoto">
           </nb-user>
         </nb-action>
       </nb-actions>
@@ -49,6 +49,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
   userPictureOnly: boolean = false;
   email: string = '';
   userInfo: any = null;
+  
+  // Propriétés calculées pour éviter les appels répétés
+  userDisplayName: string = '';
+  userProfilePhoto: string | null = null;
 
   themes = [
     {
@@ -118,21 +122,32 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   private loadUserData() {
+    console.log('🔍 HEADER - loadUserData démarré');
+    
     // Récupérer l'email depuis le token JWT
     const token = this.authService.getToken();
+    console.log('🔍 HEADER - Token récupéré:', token ? 'Présent' : 'Absent');
+    
     if (token) {
       try {
         const tokenData = JSON.parse(atob(token.split('.')[1]));
+        console.log('🔍 HEADER - Données du token:', tokenData);
+        
         this.email = tokenData.email || '';
         const userId = tokenData.nameid;
+        console.log('🔍 HEADER - Email:', this.email, '- UserId:', userId);
         
         // Charger le profil complet depuis l'API
         if (userId) {
           this.profileService.getUserProfile(parseInt(userId)).subscribe({
             next: (profile) => {
+              console.log('✅ HEADER - Profil récupéré:', profile);
               this.userInfo = profile;
+              // Mettre à jour les propriétés calculées
+              this.updateCalculatedProperties();
             },
             error: (error) => {
+              console.error('❌ HEADER - Erreur lors du chargement du profil:', error);
               // Fallback avec les données du token
               this.userInfo = {
                 email: tokenData.email,
@@ -141,24 +156,58 @@ export class HeaderComponent implements OnInit, OnDestroy {
                 role: tokenData.role,
                 profilePhotoUrl: null
               };
+              // Mettre à jour les propriétés calculées
+              this.updateCalculatedProperties();
             }
           });
         }
       } catch (e) {
-        console.error('Erreur lors du décodage du token:', e);
+        console.error('❌ HEADER - Erreur lors du décodage du token:', e);
       }
     }
   }
 
-  getUserProfilePhoto(): string {
+  private updateCalculatedProperties() {
+    // Calculer le nom d'affichage
+    if (this.userInfo?.prenom && this.userInfo?.nom) {
+      this.userDisplayName = `${this.userInfo.prenom} ${this.userInfo.nom}`;
+    } else {
+      this.userDisplayName = this.email;
+    }
+
+    // Calculer l'URL de la photo
     if (this.userInfo?.profilePhotoUrl) {
       if (this.userInfo.profilePhotoUrl.startsWith('/')) {
         const fileName = this.userInfo.profilePhotoUrl.split('/').pop();
-        return `http://localhost:5093/user/api/Utilisateur/image/${fileName}`;
+        this.userProfilePhoto = `http://localhost:5093/user/api/Utilisateur/image/${fileName}`;
+      } else {
+        this.userProfilePhoto = this.userInfo.profilePhotoUrl;
       }
-      return this.userInfo.profilePhotoUrl;
+    } else {
+      this.userProfilePhoto = null;
     }
-    return 'assets/images/imageutilisateur.png';
+  }
+
+
+
+  getUserInitials(): string {
+    if (this.userInfo?.prenom && this.userInfo?.nom) {
+      return `${this.userInfo.prenom.charAt(0)}${this.userInfo.nom.charAt(0)}`.toUpperCase();
+    }
+    if (this.email) {
+      return this.email.substring(0, 2).toUpperCase();
+    }
+    return 'U';
+  }
+
+  getUserColor(): string {
+    const colors = [
+      '#667eea', '#4facfe', '#43e97b', '#fa709a', '#ff9a9e',
+      '#a8edea', '#fed6e3', '#d299c2', '#ffecd2', '#fcb69f'
+    ];
+    const name = this.userDisplayName || this.email;
+    const index = name.charCodeAt(0) % colors.length;
+    return colors[index];
   }
 
   logout() {
@@ -185,10 +234,5 @@ export class HeaderComponent implements OnInit, OnDestroy {
     return false;
   }
 
-  getUserDisplayName(): string {
-    if (!this.userInfo || !this.userInfo.prenom || !this.userInfo.nom) {
-      return this.email;
-    }
-    return `${this.userInfo.prenom} ${this.userInfo.nom}`;
-  }
+
 }

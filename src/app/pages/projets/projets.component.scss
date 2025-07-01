@@ -262,4 +262,31 @@ nb-card.modal-card {
   max-width: 600px;
   width: 100%;
   margin: 0 auto;
+}
+
+.equipes-cell {
+  padding: 0.75rem 1.25rem !important;
+  
+  .text-muted {
+    color: #8f9bb3;
+    font-style: italic;
+  }
+  
+  .equipes-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .equipe-badge {
+    display: inline-block;
+    background-color: #edf6ff;
+    color: #3366ff;
+    font-size: 0.75rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 1rem;
+    font-weight: 500;
+    border: 1px solid #3366ff;
+    white-space: nowrap;
+  }
 } 

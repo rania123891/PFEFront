@@ -179,6 +179,7 @@ export class ProjetsComponent implements OnInit {
     this.projetService.getProjets().subscribe({
       next: (data) => {
         this.projets = data;
+        this.loadEquipesPourProjets();
         this.isLoading = false;
       },
       error: (error) => {
@@ -189,6 +190,20 @@ export class ProjetsComponent implements OnInit {
         );
         this.isLoading = false;
       }
+    });
+  }
+
+  loadEquipesPourProjets() {
+    this.projets.forEach(projet => {
+      this.projetService.getEquipesDuProjet(projet.id).subscribe({
+        next: (equipes) => {
+          projet.equipes = equipes;
+        },
+        error: (error) => {
+          console.error(`Erreur lors du chargement des équipes pour le projet ${projet.id}:`, error);
+          projet.equipes = [];
+        }
+      });
     });
   }
 

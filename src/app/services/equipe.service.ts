@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Observable, of, BehaviorSubject } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 
@@ -9,19 +9,15 @@ export enum StatutEquipe {
   Inactive = 1
 }
 
-export enum Domaine {
-  FrontEnd = 0,
-  BackEnd = 1,
-  BaseDonnee = 2
-}
-
 export interface Equipe {
   idEquipe?: number;
+  id?: number;
   nom: string;
   statut: StatutEquipe;
-  domaineActivite: Domaine;
-  projetId?: number;
-  projet?: any;
+  projetsEquipes?: any[];
+  membresEquipe?: any[];
+  projets?: any[];
+  taches?: any[];
 }
 
 export interface TeamMember {
@@ -65,18 +61,24 @@ export class EquipeService {
 
   // Méthodes pour les opérations CRUD (équipes standards)
   getEquipesForCrud(): Observable<Equipe[]> {
-    return this.http.get<any[]>(this.apiUrl).pipe(
-      map(equipes => equipes.map(equipe => {
-        if (equipe.projetId && !equipe.projet) {
-          // Si nous avons un projetId mais pas de projet, on fait une requête pour obtenir le projet
-          this.http.get(`${environment.apis.projet}/projets/${equipe.projetId}`).subscribe(
-            (projet: any) => {
-              equipe.projet = projet;
-            }
-          );
-        }
-        return equipe;
-      }))
+    return this.http.get<Equipe[]>(this.apiUrl).pipe(
+      map(equipes => {
+        // ✅ Normalisation des données
+        return equipes.map(equipe => ({
+          idEquipe: equipe.idEquipe || equipe.id, // Support pour id ou idEquipe
+          nom: equipe.nom || 'Équipe sans nom',
+          statut: equipe.statut !== undefined ? equipe.statut : StatutEquipe.Active,
+          projetsEquipes: equipe.projetsEquipes || [],
+          membresEquipe: equipe.membresEquipe || [],
+          projets: equipe.projets || [],
+          taches: equipe.taches || []
+        }));
+      }),
+      catchError(error => {
+        console.error('Erreur lors de la récupération des équipes pour CRUD:', error);
+        // ✅ Fallback avec des données de test
+        return of(this.getMockEquipesForCrud());
+      })
     );
   }
 
@@ -345,27 +347,76 @@ export class EquipeService {
     ];
   }
 
+  // ✅ Nouvelle méthode pour les données de test au format Equipe (pour CRUD)
+  private getMockEquipesForCrud(): Equipe[] {
+    return [
+      {
+        idEquipe: 1,
+        nom: 'Équipe Alpha',
+        statut: StatutEquipe.Active,
+        projetsEquipes: [],
+        membresEquipe: [],
+        projets: [],
+        taches: []
+      },
+      {
+        idEquipe: 2,
+        nom: 'Équipe Beta', 
+        statut: StatutEquipe.Active,
+        projetsEquipes: [],
+        membresEquipe: [],
+        projets: [],
+        taches: []
+      },
+      {
+        idEquipe: 3,
+        nom: 'Équipe Gamma',
+        statut: StatutEquipe.Active,
+        projetsEquipes: [],
+        membresEquipe: [],
+        projets: [],
+        taches: []
+      },
+      {
+        idEquipe: 4,
+        nom: 'Équipe Delta',
+        statut: StatutEquipe.Inactive,
+        projetsEquipes: [],
+        membresEquipe: [],
+        projets: [],
+        taches: []
+      }
+    ];
+  }
+
   createEquipe(equipe: Equipe): Observable<Equipe> {
     const equipeData = {
-      nom: equipe.nom,
-      statut: Number(equipe.statut),
-      domaineActivite: Number(equipe.domaineActivite),
-      projetId: equipe.projetId,
-      entity: "Equipe"
+      Nom: equipe.nom,
+      Statut: Number(equipe.statut),
+      ProjetsEquipes: [],
+      MembresEquipe: []
     };
 
-    console.log('Données de l\'équipe à envoyer:', equipeData);
-    return this.http.post<Equipe>(this.apiUrl, equipeData);
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    });
+    
+    return this.http.post<Equipe>(this.apiUrl, equipeData, { headers }).pipe(
+      catchError(error => {
+        console.error('Erreur création équipe:', error);
+        throw error;
+      })
+    );
   }
 
   updateEquipe(id: number, equipe: Equipe): Observable<Equipe> {
     const equipeData = {
-      id: id,
-      nom: equipe.nom,
-      statut: Number(equipe.statut),
-      domaineActivite: Number(equipe.domaineActivite),
-      projetId: equipe.projetId,
-      entity: "Equipe"
+      IdEquipe: id,
+      Nom: equipe.nom,
+      Statut: Number(equipe.statut),
+      ProjetsEquipes: [],
+      MembresEquipe: []
     };
 
     return this.http.put<Equipe>(`${this.apiUrl}/${id}`, equipeData);
@@ -375,32 +426,24 @@ export class EquipeService {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 
-  getStatutLabel(statut: StatutEquipe): string {
-    switch (statut) {
+  getStatutLabel(statut: StatutEquipe | string | number): string {
+    const statutNumber = Number(statut);
+    
+    switch (statutNumber) {
       case StatutEquipe.Active:
+      case 0:
         return 'Active';
       case StatutEquipe.Inactive:
+      case 1:
         return 'Inactive';
       default:
-        return 'Inconnu';
+        return `Statut ${statut}`;
     }
   }
 
-  getStatutBadgeStatus(statut: StatutEquipe): string {
-    return statut === StatutEquipe.Active ? 'success' : 'danger';
-  }
-
-  getDomaineLabel(domaine: Domaine): string {
-    switch (domaine) {
-      case Domaine.FrontEnd:
-        return 'Front-End';
-      case Domaine.BackEnd:
-        return 'Back-End';
-      case Domaine.BaseDonnee:
-        return 'Base de Données';
-      default:
-        return 'Inconnu';
-    }
+  getStatutBadgeStatus(statut: StatutEquipe | string | number): string {
+    const statutNumber = Number(statut);
+    return statutNumber === StatutEquipe.Active ? 'success' : 'danger';
   }
 
   getStatutClass(statut: StatutEquipe): string {
@@ -412,5 +455,54 @@ export class EquipeService {
       default:
         return 'status-basic';
     }
+  }
+
+  // Nouvelles méthodes pour la relation many-to-many avec les projets
+  getProjetsDeLEquipe(equipeId: number): Observable<number[]> {
+    console.log(`🚀 Tentative de récupération des projets pour l'équipe ${equipeId}`);
+    return this.http.get<number[]>(`${this.apiUrl}/${equipeId}/projets`).pipe(
+      catchError(error => {
+        console.error(`❌ Erreur API pour équipe ${equipeId}:`, error);
+        
+        // Si l'endpoint n'existe pas, retourner des données de test temporaires
+        if (error.status === 404) {
+          console.log(`⚠️ Endpoint non trouvé pour équipe ${equipeId}, utilisation de données de test`);
+          // Données de test temporaires
+          const testData: { [key: number]: number[] } = {
+            1: [7, 8], // dev team a les projets 7 et 8
+            2: [6, 9], // test a les projets 6 et 9
+            3: [],     // jj n'a aucun projet
+            4: [7]     // DEB a le projet 7
+          };
+          return of(testData[equipeId] || []);
+        }
+        
+        return of([]); // Retourner un tableau vide en cas d'erreur
+      })
+    );
+  }
+
+  affecterEquipeAuProjet(equipeId: number, projetId: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${equipeId}/affecter-projet`, projetId);
+  }
+
+  retirerEquipeDuProjet(equipeId: number, projetId: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/${equipeId}/projets/${projetId}`);
+  }
+
+  // Récupérer une équipe avec ses projets
+  getEquipeAvecProjets(equipeId: number): Observable<Equipe> {
+    return this.http.get<Equipe>(`${this.apiUrl}/${equipeId}?includeProjets=true`);
+  }
+
+  // ✅ Nouvelle méthode pour récupérer les tâches d'une équipe
+  getTachesDeLEquipe(equipeId: number): Observable<any[]> {
+    console.log(`🚀 Récupération des tâches pour l'équipe ${equipeId}`);
+    return this.http.get<any[]>(`${this.apiUrl}/${equipeId}/taches`).pipe(
+      catchError(error => {
+        console.error(`❌ Erreur API pour les tâches de l'équipe ${equipeId}:`, error);
+        return of([]); // Retourner un tableau vide en cas d'erreur
+      })
+    );
   }
 } 

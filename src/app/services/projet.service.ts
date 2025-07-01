@@ -18,6 +18,7 @@ export interface Projet {
   dateEcheance: Date | string;
   duree: number;
   createurId: number;
+  equipes?: any[];
 }
 
 @Injectable({
@@ -58,6 +59,7 @@ export class ProjetService {
       dateEcheance: projet.dateEcheance,
       duree: projet.duree,
       createurId: projet.createurId,
+      ProjetsEquipes: [],
       Planifications: []
     };
 
@@ -75,6 +77,7 @@ export class ProjetService {
       dateEcheance: projet.dateEcheance,
       duree: projet.duree,
       createurId: projet.createurId,
+      ProjetsEquipes: [],
       Planifications: []
     };
 
@@ -84,5 +87,27 @@ export class ProjetService {
 
   deleteProjet(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  }
+
+  // ✅ Récupérer un projet avec ses équipes
+  getProjetAvecEquipes(id: number): Observable<Projet> {
+    return this.http.get<Projet>(`${this.apiUrl}/${id}?includeEquipes=true`);
+  }
+
+  // ✅ Méthodes pour gérer les équipes d'un projet
+  getEquipesDuProjet(projetId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/${projetId}/equipes`);
+  }
+
+  affecterEquipeAuProjet(projetId: number, equipeId: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${projetId}/equipes/${equipeId}`, {});
+  }
+
+  retirerEquipeDuProjet(projetId: number, equipeId: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/${projetId}/equipes/${equipeId}`);
+  }
+
+  getEquipesDisponibles(projetId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/${projetId}/equipes-disponibles`);
   }
 } 

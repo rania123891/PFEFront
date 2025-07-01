@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, forkJoin, of } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { map, switchMap } from 'rxjs/operators';
+import { map, switchMap, catchError } from 'rxjs/operators';
 import { UserService, User } from './user.service';
 
 export interface Message {
@@ -14,26 +14,43 @@ export interface Message {
   lu: boolean;
   expediteur?: User;
   destinataire?: User;
+  // Propriétés pour les fichiers
+  fileId?: string;
+  fileName?: string;
+  fileSize?: number;
+  mimeType?: string;
+  isFile?: boolean;
 }
 
 export interface CreateMessageDto {
   contenu: string;
   expediteurEmail: string;
   emailDestinataire: string;
+  expediteurId?: string;
+  destinataireId?: string;
+  // Propriétés pour les fichiers
+  fileId?: string;
+  fileName?: string;
+  fileSize?: number;
+  mimeType?: string;
+  isFile?: boolean;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class MessageService {
-  private apiUrl = `${environment.apiUrl}/message/api/Messages`;
+  private apiUrl = `${environment.apis.message}/Messages`;
 
   constructor(
     private http: HttpClient,
     private userService: UserService
-  ) { }
+  ) {
+    console.log('MessageService initialized with URL:', this.apiUrl);
+  }
 
   getMessagesByUser(userId: string): Observable<Message[]> {
+    console.log('Récupération des messages pour l\'utilisateur:', userId);
     return this.http.get<Message[]>(`${this.apiUrl}/${userId}`).pipe(
       switchMap(messages => {
         // Récupérer tous les IDs uniques des utilisateurs
@@ -50,8 +67,12 @@ export class MessageService {
           return of(messages);
         }
 
-        // Obtenir tous les utilisateurs en une seule requête
-        return this.userService.getUsers().pipe(
+        // Obtenir tous les utilisateurs
+        return this.userService.getUsersForMessaging().pipe(
+          catchError(error => {
+            console.warn('Erreur avec for-messaging, tentative avec getUsers:', error);
+            return this.userService.getUsers();
+          }),
           map(users => {
             const userMap = new Map<string, User>();
             users.forEach(user => {
@@ -66,24 +87,57 @@ export class MessageService {
             }));
           })
         );
+      }),
+      catchError(error => {
+        console.error('❌ Service de messagerie non disponible:', error);
+        
+        // Retourner un tableau vide en cas d'erreur pour que l'interface fonctionne
+        return of([]);
       })
     );
   }
 
   envoyerMessage(message: CreateMessageDto): Observable<Message> {
-    // Vérification des données avant envoi
     if (!message.expediteurEmail || !message.emailDestinataire || !message.contenu) {
       throw new Error('Données de message incomplètes');
     }
     
-    // Log pour déboguer
-    console.log('Envoi vers:', this.apiUrl + '/send');
-    console.log('Données:', message);
-
-    return this.http.post<Message>(`${this.apiUrl}/send`, message);
+    console.log('Envoi de message:', message);
+    
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+    
+    // Essayer d'abord l'endpoint /simple-send (plus robuste selon Cursor)
+    return this.http.post<Message>(`${this.apiUrl}/simple-send`, message, { headers }).pipe(
+      catchError(error => {
+        console.error('Erreur avec /simple-send, tentative avec /send:', error);
+        // Si échec, essayer /send
+        return this.http.post<Message>(`${this.apiUrl}/send`, message, { headers });
+      })
+    );
   }
 
   marquerCommeLu(messageId: string): Observable<void> {
-    return this.http.put<void>(`${this.apiUrl}/${messageId}/lu`, {});
+    return this.http.put<void>(`${this.apiUrl}/${messageId}/lu`, {}).pipe(
+      catchError(error => {
+        console.warn('Erreur lors du marquage comme lu (service non disponible):', error);
+        return of(void 0);
+      })
+    );
+  }
+
+  getConversations(userId: string): Observable<Message[]> {
+    return this.getMessagesByUser(userId);
+  }
+
+  getConversationDetail(userId: string, otherUserId: string): Observable<Message[]> {
+    return this.getMessagesByUser(userId).pipe(
+      map(messages => messages.filter(m => 
+        (m.expediteurId === userId && m.destinataireId === otherUserId) ||
+        (m.expediteurId === otherUserId && m.destinataireId === userId)
+      ))
+    );
   }
 } 

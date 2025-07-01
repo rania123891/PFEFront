@@ -52,7 +52,7 @@
     "ckeditor": "4.7.3",
     "classlist.js": "1.1.20150312",
     "core-js": "2.5.1",
-    "dhtmlx-gantt": "^9.0.10",
+    "dhtmlx-gantt": "^9.0.11",
     "echarts": "^4.9.0",
     "eva-icons": "^1.1.3",
     "frappe-gantt": "^1.0.3",

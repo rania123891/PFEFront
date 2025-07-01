@@ -33,8 +33,10 @@ export interface Tache {
   projetId?: number;
   listeId?: number;
   assigneId?: number;
+  equipeId?: number;
   projet?: any;
   liste?: any;
+  equipe?: any;
   commentaires?: Commentaire[];
   planifications?: any[];
 }
@@ -43,7 +45,7 @@ export interface Tache {
   providedIn: 'root'
 })
 export class TacheService {
-  private apiUrl = `${environment.apis.projet}/taches`;
+  private apiUrl = 'http://localhost:5093/projet/api/taches';
   private httpOptions = {
     headers: new HttpHeaders({
       'Content-Type': 'application/json'
@@ -53,13 +55,22 @@ export class TacheService {
   constructor(private http: HttpClient) { }
 
   private handleError(error: any): Observable<never> {
-    console.error('Erreur API Tâches:', error);
+    console.error('❌ Erreur TacheController:', error);
+    
+    if (error.status === 400) {
+      console.error('🔍 Erreur de validation (400):', error.error);
+    } else if (error.status === 404) {
+      console.error('🔍 Équipe non trouvée (404):', error.error);
+    } else if (error.status === 500) {
+      console.error('🔍 Erreur serveur (500):', error.error);
+    }
+    
     return throwError(() => error);
   }
 
   getTaches(): Observable<Tache[]> {
-    console.log('🔍 Appel API getTaches vers:', this.apiUrl);
-    return this.http.get<Tache[]>(this.apiUrl)
+    console.log('🔍 Appel API getTaches vers:', `${this.apiUrl}/all`);
+    return this.http.get<Tache[]>(`${this.apiUrl}/all`)
       .pipe(catchError(this.handleError));
   }
 
@@ -69,25 +80,27 @@ export class TacheService {
       .pipe(catchError(this.handleError));
   }
 
+  getTachesByEquipe(equipeId: number): Observable<Tache[]> {
+    console.log('🔍 Appel API getTachesByEquipe vers:', `${this.apiUrl}/equipe/${equipeId}`);
+    return this.http.get<Tache[]>(`${this.apiUrl}/equipe/${equipeId}`)
+      .pipe(catchError(this.handleError));
+  }
+
   getTache(id: number): Observable<Tache> {
+    console.log('🔍 Appel API getTache vers:', `${this.apiUrl}/${id}`);
     return this.http.get<Tache>(`${this.apiUrl}/${id}`)
       .pipe(catchError(this.handleError));
   }
 
   createTache(tache: Tache): Observable<Tache> {
     const tacheData = {
-      titre: tache.titre,
-      description: tache.description || '',
-      priorite: Number(tache.priorite),
-      statut: Number(tache.statut || StatutTache.EnCours),
-      dateCreation: new Date().toISOString(),
-      dateEcheance: tache.dateEcheance || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // +7 jours par défaut
-      planifications: []
-      // projetId, listeId, assigneId omis car optionnels
+      Titre: tache.titre,
+      Priorite: Number(tache.priorite),
+      EquipeId: tache.equipeId
     };
     
-    console.log('Données de la tâche à envoyer:', tacheData);
-    return this.http.post<Tache>(this.apiUrl, tacheData, this.httpOptions)
+    console.log('✅ Données envoyées au TacheController /create:', tacheData);
+    return this.http.post<Tache>(`${this.apiUrl}/create`, tacheData, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 

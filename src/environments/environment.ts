@@ -14,6 +14,7 @@ export const environment = {
   apis: {
     projet: 'http://localhost:5093/projet/api',
     user: 'http://localhost:5093/user/api',
-    assistant: 'http://localhost:5093/assistant/api'
+    assistant: 'http://localhost:5093/assistant/api',
+    message: 'http://localhost:5093/message/api'
   }
 };
